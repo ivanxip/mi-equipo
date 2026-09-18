@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cuaderno de Banda</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F6F4EC;
+    --surface:#FFFFFF;
+    --ink:#132416;
+    --ink-dim:#5C6B5D;
+    --pitch:#1F6F3E;
+    --pitch-dim:#E4EFE6;
+    --line:#DAD5C6;
+    --amber:#C98A1F;
+    --amber-bg:#FBEDD3;
+    --red:#B8433A;
+    --red-bg:#F7E1DE;
+    --bench:#8A8368;
+    --shadow: 0 1px 2px rgba(19,36,22,0.06);
+    --radius: 14px;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0F1710;
+      --surface:#17211A;
+      --ink:#EDEEE6;
+      --ink-dim:#93A092;
+      --pitch:#48B579;
+      --pitch-dim:#1B2E22;
+      --line:#2A362C;
+      --amber:#E2A33D;
+      --amber-bg:#3A2E15;
+      --red:#E2685D;
+      --red-bg:#3A2019;
+      --bench:#9A9376;
+      --shadow: 0 1px 3px rgba(0,0,0,0.4);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0F1710;
+    --surface:#17211A;
+    --ink:#EDEEE6;
+    --ink-dim:#93A092;
+    --pitch:#48B579;
+    --pitch-dim:#1B2E22;
+    --line:#2A362C;
+    --amber:#E2A33D;
+    --amber-bg:#3A2E15;
+    --red:#E2685D;
+    --red-bg:#3A2019;
+    --bench:#9A9376;
+    --shadow: 0 1px 3px rgba(0,0,0,0.4);
+    color-scheme: dark;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Inter',system-ui,-apple-system,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    padding-bottom: calc(72px + env(safe-area-inset-bottom));
+    min-height:100vh;
+  }
+  .num, .clock, .kpi-val, .badge-num{
+    font-family:'Space Grotesk', monospace;
+  }
+  a{color:inherit;}
+  button{font-family:inherit;}
+  ::selection{background:var(--pitch);color:#fff;}
+
+  header.topbar{
+    position:sticky;top:0;z-index:10;
+    background:var(--bg);
+    padding:18px 18px 10px;
+    border-bottom:1px solid var(--line);
+  }
+  header.topbar h1{
+    font-family:'Space Grotesk';
+    font-size:20px;
+    font-weight:700;
+    margin:0 0 2px;
+    letter-spacing:-0.01em;
+  }
+  header.topbar .sub{
+    color:var(--ink-dim);
+    font-size:13px;
+  }
+
+  main{max-width:640px;margin:0 auto;padding:16px;}
+
+  nav.tabbar{
+    position:fixed;bottom:0;left:0;right:0;z-index:20;
+    background:var(--surface);
+    border-top:1px solid var(--line);
+    display:flex;
+    padding-bottom: env(safe-area-inset-bottom);
+    box-shadow: 0 -1px 8px rgba(0,0,0,0.04);
+  }
+  nav.tabbar button{
+    flex:1;background:none;border:none;
+    padding:10px 4px 8px;
+    display:flex;flex-direction:column;align-items:center;gap:3px;
+    color:var(--ink-dim);
+    font-size:11px;
+    cursor:pointer;
+  }
+  nav.tabbar button .ico{font-size:20px;line-height:1;}
+  nav.tabbar button.active{color:var(--pitch);}
+
+  .card{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:16px;
+    margin-bottom:12px;
+    box-shadow:var(--shadow);
+  }
+  .card h2{font-size:15px;margin:0 0 12px;font-weight:600;}
+  .field{margin-bottom:12px;}
+  .field label{display:block;font-size:12px;color:var(--ink-dim);margin-bottom:5px;font-weight:500;}
+  .field input, .field select{
+    width:100%;padding:10px 12px;
+    border:1px solid var(--line);border-radius:10px;
+    background:var(--bg);color:var(--ink);
+    font-size:15px;font-family:inherit;
+  }
+  .field input:focus, .field select:focus{outline:2px solid var(--pitch);outline-offset:-1px;}
+  .row{display:flex;gap:8px;}
+  .row > .field{flex:1;}
+
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:6px;
+    padding:11px 16px;border-radius:10px;border:none;
+    font-size:14px;font-weight:600;cursor:pointer;
+    background:var(--pitch);color:#fff;width:100%;
+  }
+  .btn:active{opacity:0.85;}
+  .btn.secondary{background:var(--pitch-dim);color:var(--pitch);}
+  .btn.ghost{background:none;color:var(--ink-dim);border:1px solid var(--line);}
+  .btn.danger{background:var(--red-bg);color:var(--red);}
+  .btn.small{padding:7px 10px;font-size:12.5px;width:auto;}
+
+  .empty{
+    text-align:center;padding:40px 20px;color:var(--ink-dim);
+  }
+  .empty .ico{font-size:34px;display:block;margin-bottom:10px;}
+
+  .chip{
+    display:inline-block;padding:3px 9px;border-radius:99px;
+    font-size:11px;font-weight:600;
+  }
+  .chip.live{background:var(--red-bg);color:var(--red);}
+  .chip.scheduled{background:var(--pitch-dim);color:var(--pitch);}
+  .chip.finished{background:var(--line);color:var(--ink-dim);}
+
+  .team-select{display:flex;gap:8px;margin-bottom:14px;overflow-x:auto;padding-bottom:2px;}
+  .team-pill{
+    flex:none;padding:8px 16px;border-radius:99px;border:1px solid var(--line);
+    background:var(--surface);color:var(--ink);font-size:13.5px;font-weight:600;cursor:pointer;
+  }
+  .team-pill.active{background:var(--pitch);border-color:var(--pitch);color:#fff;}
+
+  .player-row{
+    display:flex;align-items:center;gap:10px;
+    padding:11px 4px;border-bottom:1px solid var(--line);
+  }
+  .player-row:last-child{border-bottom:none;}
+  .player-num{
+    width:30px;height:30px;border-radius:8px;background:var(--pitch-dim);color:var(--pitch);
+    display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex:none;
+  }
+  .player-name{flex:1;font-size:14.5px;font-weight:600;}
+  .player-pos{font-size:11.5px;color:var(--ink-dim);}
+
+  .match-item{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:14px;border:1px solid var(--line);border-radius:12px;margin-bottom:10px;
+    background:var(--surface);cursor:pointer;
+  }
+  .match-item .opp{font-weight:700;font-size:15px;}
+  .match-item .date{font-size:12.5px;color:var(--ink-dim);margin-top:2px;}
+
+  /* live view — pantalla completa */
+  .live-full{
+    position:fixed;inset:0;z-index:30;background:var(--bg);
+    display:flex;flex-direction:column;
+    padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-bottom);
+  }
+  .live-topbar{
+    display:flex;align-items:center;gap:10px;padding:10px 12px;
+    border-bottom:1px solid var(--line);flex:none;
+  }
+  .live-topbar .back{background:none;border:none;font-size:20px;color:var(--ink-dim);cursor:pointer;padding:2px 4px;}
+  .live-topbar .meta{flex:1;min-width:0;}
+  .live-topbar .meta .opp{font-weight:700;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .live-topbar .meta .date{font-size:11px;color:var(--ink-dim);}
+< truncated lines 205-834 >
+    clockControls = `<span class="chip finished">Fin</span>`;
+  } else if(match.clockRunning){
+    clockControls = `
+      <button class="ctlbtn" style="background:var(--amber-bg);color:var(--amber);" onclick="handlePause()">⏸</button>
+      <button class="ctlbtn" style="background:var(--red-bg);color:var(--red);" onclick="handleEnd()">⏹</button>`;
+  } else if(match.status==='scheduled' && match.clockAccumulatedMs===0){
+    clockControls = `<button class="ctlbtn" style="background:var(--pitch-dim);color:var(--pitch);" onclick="handleStart()">▶</button>`;
+  } else {
+    clockControls = `
+      <button class="ctlbtn" style="background:var(--pitch-dim);color:var(--pitch);" onclick="handleStart()">▶</button>
+      <button class="ctlbtn" style="background:var(--red-bg);color:var(--red);" onclick="handleEnd()">⏹</button>`;
+  }
+
+  const onList = players.filter(p=>onField.has(p.id));
+  const benchList = players.filter(p=>!onField.has(p.id));
+
+  const pitchInner = players.length===0
+    ? `<div style="color:#fff;opacity:0.9;font-size:12.5px;width:100%;text-align:center;margin-top:24px;padding:0 20px;">Este equipo no tiene jugadores. Añádelos en la pestaña Equipos.</div>`
+    : (onList.length===0
+        ? `<div style="color:#fff;opacity:0.9;font-size:12.5px;width:100%;text-align:center;margin-top:24px;padding:0 20px;">Toca a un suplente para ponerlo en el campo</div>`
+        : onList.map(p=>tokenHtml(p, minutesByPlayer[p.id]||0, eventsByPlayer[p.id]||{}, true, canEdit)).join(''));
+
+  const benchInner = benchList.length===0
+    ? `<div style="font-size:11px;color:var(--ink-dim);text-align:center;padding:10px 4px;">Todos en el campo</div>`
+    : benchList.map(p=>tokenHtml(p, minutesByPlayer[p.id]||0, eventsByPlayer[p.id]||{}, false, canEdit)).join('');
+
+  const html = `
+  <div class="live-full">
+    <div class="live-topbar">
+      <button class="back" onclick="setActiveTab('matches')">←</button>
+      <div class="meta">
+        <div class="opp">${esc(team?team.name:'')} vs ${esc(match.opponent)}</div>
+        <div class="date">${fmtDate(match.date)}</div>
+      </div>
+      <div class="clockwrap">
+        <div class="clock">${fmtClock(elapsed)}</div>
+        ${clockControls}
+      </div>
+    </div>
+    <div class="score-bar">
+      <div class="score-side">
+        <div class="score-name">${esc(team?team.name:'Nuestro equipo')}</div>
+        <div class="score-controls">
+          ${canEdit?`<button onclick="handleRemoveGoalClick()">−</button>`:''}
+          <span class="score-num">${ourGoals}</span>
+          ${canEdit?`<button onclick="handleAddGoalClick()">+</button>`:''}
+        </div>
+      </div>
+      <div class="score-sep">–</div>
+      <div class="score-side">
+        <div class="score-controls">
+          ${canEdit?`<button onclick="handleRivalScoreClick(-1)">−</button>`:''}
+          <span class="score-num">${rivalGoals}</span>
+          ${canEdit?`<button onclick="handleRivalScoreClick(1)">+</button>`:''}
+        </div>
+        <div class="score-name">${esc(match.opponent)}</div>
+      </div>
+    </div>
+    <div class="stage">
+      <div class="pitch">
+        <div class="pitch-mark-circle"></div>
+        <div class="pitch-mark-line"></div>
+        <div class="pitch-players">${pitchInner}</div>
+      </div>
+      <div class="bench-col">
+        <div class="bench-header">Banca</div>
+        <div class="bench-list">${benchInner}</div>
+        <div class="cards-box">
+          <div class="card-counter">
+            ${canEdit?`<button onclick="handleRemoveCardClick('yellow')">−</button>`:'<span></span>'}
+            <span>🟨 ${eventsCount('yellow')}</span>
+            ${canEdit?`<button onclick="handleAddCardClick('yellow')">+</button>`:'<span></span>'}
+          </div>
+          <div class="card-counter">
+            ${canEdit?`<button onclick="handleRemoveCardClick('red')">−</button>`:'<span></span>'}
+            <span>🟥 ${eventsCount('red')}</span>
+            ${canEdit?`<button onclick="handleAddCardClick('red')">+</button>`:'<span></span>'}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+  app.innerHTML = html;
+}
+
+function tokenHtml(p, minMs, ev, isOn, canEdit){
+  const mins = Math.floor(Math.max(0,minMs)/60000);
+  const badge = ev.red ? '🟥' : (ev.yellow ? '🟨' : '');
+  const tap = canEdit ? `onclick="handleToggleField('${p.id}',${isOn})"` : '';
+  return `<div class="ptoken ${isOn?'':'bench'}" ${tap}>
+    <div class="pcircle">
+      ${esc(shortName(p.name))}
+      ${badge?`<span class="pbadge">${badge}</span>`:''}
+      ${ev.goal?`<span class="pbadge-goal">⚽${ev.goal}</span>`:''}
+    </div>
+    <div class="pmins">${mins}'</div>
+  </div>`;
+}
+
+function handleStart(){ startOrResumeClock(State.liveMatch); }
+function handlePause(){ pauseClock(State.liveMatch); }
+function handleEnd(){
+  if(!confirm('¿Finalizar el partido? Se cerrará el tiempo de todos los jugadores en cancha.')) return;
+  const players = State.playersByTeam[State.liveMatch.teamId] || [];
+  const elapsed = matchElapsedMs(State.liveMatch);
+  const {onField} = deriveFieldState(State.liveLog, players, elapsed);
+  endMatch(State.liveMatch, [...onField]);
+}
+function handleToggleField(playerId, isOn){ toggleFieldPlayer(State.liveMatch, playerId, isOn); }
+
+function handleAddGoalClick(){
+  const players = State.playersByTeam[State.liveMatch.teamId] || [];
+  if(players.length===0){ toast('Añade jugadores primero'); return; }
+  openPicker('¿Quién marca?', players, (scorerId)=>{
+    if(!scorerId) return;
+    const rest = players.filter(p=>p.id!==scorerId);
+    openPicker('¿Asistencia?', rest, (assistId)=>{
+      addGoal(State.liveMatch, scorerId, assistId);
+    }, 'Sin asistencia');
+  });
+}
+function handleRemoveGoalClick(){
+  if(!confirm('¿Quitar el último gol registrado?')) return;
+  removeLastGoal();
+}
+function handleAddCardClick(type){
+  const players = State.playersByTeam[State.liveMatch.teamId] || [];
+  if(players.length===0){ toast('Añade jugadores primero'); return; }
+  const title = type==='yellow' ? '¿A quién se amonesta?' : '¿A quién se expulsa?';
+  openPicker(title, players, (pid)=>{ if(pid) logEvent(State.liveMatch, pid, type); });
+}
+function handleRemoveCardClick(type){
+  const label = type==='yellow' ? 'amarilla' : 'roja';
+  if(!confirm(`¿Quitar la última tarjeta ${label}?`)) return;
+  removeLastCard(type);
+}
+function handleRivalScoreClick(delta){ setRivalScore(State.liveMatch, delta); }
+
+/* ----- Estadísticas ----- */
+let statsCache = {}; // teamId -> {totals, matchesPlayedCount}
+let statsLoading = false;
+function renderStats(app){
+  if(State.teams.length===0){
+    app.innerHTML = `<div class="empty"><span class="ico">👥</span>Primero crea un equipo.</div>`;
+    return;
+  }
+  if(!State.statsTeamId) State.statsTeamId = State.teams[0].id;
+  let html = `<div class="team-select">` + State.teams.map(t=>
+    `<button class="team-pill ${State.statsTeamId===t.id?'active':''}" onclick="selectStatsTeam('${t.id}')">${esc(t.name)}</button>`
+  ).join('') + `</div>`;
+
+  const cached = statsCache[State.statsTeamId];
+  html += `<div class="card">`;
+  if(statsLoading && !cached){
+    html += `<div class="empty" style="padding:16px;">Calculando estadísticas…</div>`;
+  } else if(cached){
+    html += `<h2>Temporada · ${cached.matchesPlayedCount} partido(s) finalizado(s)</h2>`;
+    const rows = cached.totals.filter(r=>r.player).sort((a,b)=> b.minutes - a.minutes);
+    if(rows.length===0){
+      html += `<div class="empty" style="padding:16px;">Aún no hay partidos finalizados con datos.</div>`;
+    } else {
+      html += `<div style="overflow-x:auto;"><table class="stats"><thead><tr>
+        <th>Jugador</th><th class="c">PJ</th><th class="c">Min</th><th class="c">⚽</th><th class="c">🅰️</th><th class="c">🟨</th><th class="c">🟥</th>
+      </tr></thead><tbody>` +
+      rows.map(r=>`<tr>
+        <td><div class="pname">${esc(r.player.name)}</div><div class="pnum">${r.player.number?'#'+r.player.number:''} ${esc(r.player.position||'')}</div></td>
+        <td class="c">${r.matches}</td>
+        <td class="c">${r.minutes>0?Math.floor(r.minutes/60000):0}'</td>
+        <td class="c">${r.goal}</td>
+        <td class="c">${r.assist}</td>
+        <td class="c">${r.yellow}</td>
+        <td class="c">${r.red}</td>
+      </tr>`).join('') + `</tbody></table></div>`;
+    }
+    html += `<button class="btn ghost" style="margin-top:14px;" onclick="refreshStats(true)">Actualizar</button>`;
+  } else {
+    html += `<div class="empty" style="padding:16px;">Sin datos aún</div>`;
+  }
+  html += `</div>`;
+  app.innerHTML = html;
+  if(!cached && !statsLoading) refreshStats(false);
+}
+function selectStatsTeam(teamId){ State.statsTeamId = teamId; renderDynamic(); }
+async function refreshStats(force){
+  const teamId = State.statsTeamId;
+  if(!teamId) return;
+  if(force) delete statsCache[teamId];
+  statsLoading = true;
+  try{
+    const result = await loadSeasonStats(teamId);
+    statsCache[teamId] = result;
+  }catch(e){ console.error(e); }
+  statsLoading = false;
+  if(State.view==='stats') renderDynamic();
+}
+
+/* invalidar caché de stats cuando cambian los partidos */
+const _origRenderDynamic = renderDynamic;
+
+/* ---------- Arranque ---------- */
+initDb();
+</script>
+</body>
+</html>
