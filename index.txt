@@ -1024,8 +1024,7 @@ function App() {
       setMatchType(rec.matchType || "liga");
       if (rec.defaultSlots) setDefaultSlots(function(prev) { return Object.assign({}, prev, rec.defaultSlots); });
       if (rec.formationKey === "CUSTOM" && Array.isArray(rec.customSlots)) { setCustomSlots(rec.customSlots); setFormationKey("CUSTOM"); }
-      else setFormationKey(rec.formationKey || Object.keys(FORMATS[rec.teamFormat || "f11"].formations)[0]);
-      setAvailablePlayerIds(rec.availablePlayerIds || []); setAbsences(rec.absences || {}); setLineup(rec.lineup || {});
+      else setFormationKey(rec.formationKey || Object.keys(FORMATS[rec.teamFormat || "f11"].formations)[0]);  setAvailablePlayerIds(rec.availablePlayerIds || []); setAbsences(rec.absences || {}); setLineup(rec.lineup || {});
       setSetupStep("info"); setMatchPhase("setup");
     }
     function openUpcoming(rec) { if (rec.teamId && rec.teamId !== currentTeamId) { switchTeam(rec.teamId); setTimeout(function() { startUpcoming(rec); }, 60); } else startUpcoming(rec); }
@@ -1035,8 +1034,7 @@ function App() {
       setMatchType(rec.matchType || "liga");
       if (rec.defaultSlots) setDefaultSlots(function(prev) { return Object.assign({}, prev, rec.defaultSlots); });
       if (rec.formationKey === "CUSTOM" && Array.isArray(rec.customSlots)) { setCustomSlots(rec.customSlots); setFormationKey("CUSTOM"); }
-      else setFormationKey(rec.formationKey || Object.keys(FORMATS[rec.teamFormat || "f11"].formations)[0]);
-      setAvailablePlayerIds(rec.availablePlayerIds || []); setAbsences(rec.absences || {}); setLineup(rec.lineup || {});
+      else setFormationKey(rec.formationKey || Object.keys(FORMATS[rec.teamFormat || "f11"].formations)[0]);  setAvailablePlayerIds(rec.availablePlayerIds || []); setAbsences(rec.absences || {}); setLineup(rec.lineup || {});
       var snapshot = Object.assign({}, rec.lineup || {});
       initialLineupRef.current = snapshot;
       setInitialLineup(snapshot);
