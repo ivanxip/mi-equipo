@@ -666,7 +666,8 @@
         {agg.map(function(p) { return <tr key={p.id}><td>{p.name}</td><td className="t-num">{p.matches}</td><td className="t-num">{formatTime(p.seconds)}</td><td className="t-num">{p.goals || ""}</td><td className="t-num">{p.assists || ""}</td><td className="t-num">{p.yellow || ""}</td><td className="t-num">{p.red || ""}</td></tr>; })}
       </tbody></table>}
     </div>);
-  } function App() {
+  } 
+function App() {
     var aL = useState(false); var loaded = aL[0]; var setLoaded = aL[1];
     var aT = useState([]); var teams = aT[0]; var setTeams = aT[1];
     var aC = useState(null); var currentTeamId = aC[0]; var setCurrentTeamId = aC[1];
