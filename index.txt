@@ -1,0 +1,1637 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<title>Mi equipo · Control de minutos</title>
+<meta name="theme-color" content="#0D1310" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Mi equipo" />
+<link id="manifest-link" rel="manifest" />
+<link id="apple-icon" rel="apple-touch-icon" href="icono.png" />
+<link id="favicon" rel="icon" type="image/png" href="icono.png" />
+<style>
+  html, body, #root { height: 100%; margin: 0; background: #0A0F0C; color: #EDF3EE; }
+  body { overscroll-behavior: none; -webkit-tap-highlight-color: transparent; font-family: -apple-system, BlinkMacSystemFont, "Inter", sans-serif; }
+  input, select, textarea { font-size: 16px; }
+  #boot { display: flex; align-items: center; justify-content: center; height: 100%; color: #93A399; font-size: 14px; }
+</style>
+</head>
+<body>
+  <div id="root"><div id="boot">Cargando…</div></div>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone@7.24.7/babel.min.js"></script>
+  <script>
+    (async function() {
+      var iconPath = "icono.png";
+      document.getElementById("apple-icon").href = iconPath;
+      document.getElementById("favicon").href = iconPath;
+      var manifest = { name: "Mi equipo · Control de minutos", short_name: "Mi equipo", description: "Control de tiempo de juego y tarjetas", start_url: ".", scope: ".", display: "standalone", orientation: "portrait", background_color: "#0A0F0C", theme_color: "#0A0F0C", icons: [{ src: iconPath, sizes: "192x192", type: "image/png", purpose: "any" }, { src: iconPath, sizes: "512x512", type: "image/png", purpose: "any" }] };
+      var manifestBlob = new Blob([JSON.stringify(manifest)], { type: "application/manifest+json" });
+      document.getElementById("manifest-link").href = URL.createObjectURL(manifestBlob);
+      if ("serviceWorker" in navigator && location.protocol === "https:") {
+        var swCode = "const CACHE='mi-equipo-v46';self.addEventListener('install',function(e){self.skipWaiting();});self.addEventListener('activate',function(e){e.waitUntil(self.clients.claim().then(function(){return caches.keys();}).then(function(k){return Promise.all(k.map(function(n){if(n!==CACHE)return caches.delete(n);}));}));});self.addEventListener('fetch',function(e){var req=e.request;if(req.method!=='GET')return;if(req.mode==='navigate'){e.respondWith(fetch(req).catch(function(){return caches.match(req);}));return;}e.respondWith(fetch(req).then(function(res){if(res&&res.status===200&&res.type==='basic'){var copy=res.clone();caches.open(CACHE).then(function(c){c.put(req,copy);});}return res;}).catch(function(){return caches.match(req);}));});";
+        var swBlob = new Blob([swCode], { type: "application/javascript" });
+        navigator.serviceWorker.register(URL.createObjectURL(swBlob)).catch(function() {});
+      }
+    })();
+    var PREFIX = "app:";
+    window.storage = {
+      get: async function(key) { try { var raw = localStorage.getItem(PREFIX + key); return raw ? { value: raw } : null; } catch (e) { return null; } },
+      set: async function(key, value) { try { localStorage.setItem(PREFIX + key, value); return true; } catch (e) { return false; } },
+      remove: async function(key) { try { localStorage.removeItem(PREFIX + key); } catch (e) {} }
+    };
+  </script>
+  <script type="text/babel" data-presets="react">
+  const { useState, useEffect, useRef } = React;
+  const DEFAULT_SLOTS_F11 = {
+    "4-4-2": [{ id: "GK", pos: "POR", x: 150, y: 388 },{ id: "LB", pos: "LI", x: 46, y: 318 },{ id: "CB1", pos: "DFC", x: 113, y: 336 },{ id: "CB2", pos: "DFC", x: 187, y: 336 },{ id: "RB", pos: "LD", x: 254, y: 318 },{ id: "LM", pos: "MI", x: 46, y: 222 },{ id: "CM1", pos: "MC", x: 118, y: 234 },{ id: "CM2", pos: "MC", x: 182, y: 234 },{ id: "RM", pos: "MD", x: 254, y: 222 },{ id: "ST1", pos: "DC", x: 113, y: 108 },{ id: "ST2", pos: "DC", x: 187, y: 108 }],
+    "4-3-3": [{ id: "GK", pos: "POR", x: 150, y: 388 },{ id: "LB", pos: "LI", x: 46, y: 318 },{ id: "CB1", pos: "DFC", x: 113, y: 336 },{ id: "CB2", pos: "DFC", x: 187, y: 336 },{ id: "RB", pos: "LD", x: 254, y: 318 },{ id: "CM1", pos: "MC", x: 88, y: 236 },{ id: "CM2", pos: "MC", x: 150, y: 250 },{ id: "CM3", pos: "MC", x: 212, y: 236 },{ id: "LW", pos: "EI", x: 58, y: 108 },{ id: "ST", pos: "DC", x: 150, y: 88 },{ id: "RW", pos: "ED", x: 242, y: 108 }],
+    "3-4-3": [{ id: "GK", pos: "POR", x: 150, y: 388 },{ id: "CB1", pos: "DFC", x: 88, y: 336 },{ id: "CB2", pos: "DFC", x: 150, y: 346 },{ id: "CB3", pos: "DFC", x: 212, y: 336 },{ id: "LM", pos: "MI", x: 38, y: 232 },{ id: "CM1", pos: "MC", x: 115, y: 244 },{ id: "CM2", pos: "MC", x: 185, y: 244 },{ id: "RM", pos: "MD", x: 262, y: 232 },{ id: "LW", pos: "EI", x: 58, y: 108 },{ id: "ST", pos: "DC", x: 150, y: 88 },{ id: "RW", pos: "ED", x: 242, y: 108 }],
+    "4-2-3-1": [{ id: "GK", pos: "POR", x: 150, y: 388 },{ id: "LB", pos: "LI", x: 46, y: 318 },{ id: "CB1", pos: "DFC", x: 113, y: 336 },{ id: "CB2", pos: "DFC", x: 187, y: 336 },{ id: "RB", pos: "LD", x: 254, y: 318 },{ id: "DM1", pos: "MCD", x: 105, y: 262 },{ id: "DM2", pos: "MCD", x: 195, y: 262 },{ id: "LAM", pos: "MI", x: 58, y: 172 },{ id: "CAM", pos: "MCO", x: 150, y: 158 },{ id: "RAM", pos: "MD", x: 242, y: 172 },{ id: "ST", pos: "DC", x: 150, y: 88 }],
+    "1-3-1-2-3-1": [{ id: "GK", pos: "POR", x: 150, y: 392 },{ id: "CB1", pos: "DFC", x: 78, y: 335 },{ id: "CB2", pos: "DFC", x: 150, y: 335 },{ id: "CB3", pos: "DFC", x: 222, y: 335 },{ id: "DM", pos: "MCD", x: 150, y: 272 },{ id: "CM1", pos: "MC", x: 100, y: 218 },{ id: "CM2", pos: "MC", x: 200, y: 218 },{ id: "LM", pos: "MI", x: 48, y: 145 },{ id: "CAM", pos: "MCO", x: 150, y: 145 },{ id: "RM", pos: "MD", x: 252, y: 145 },{ id: "ST", pos: "DC", x: 150, y: 68 }]
+  };
+  const DEFAULT_SLOTS_F7 = {
+    "2-3-1": [{ id: "GK", pos: "POR", x: 150, y: 388 },{ id: "LB", pos: "LI", x: 90, y: 320 },{ id: "RB", pos: "LD", x: 210, y: 320 },{ id: "LM", pos: "MI", x: 60, y: 220 },{ id: "CM", pos: "MC", x: 150, y: 230 },{ id: "RM", pos: "MD", x: 240, y: 220 },{ id: "ST", pos: "DC", x: 150, y: 100 }],
+    "3-2-1": [{ id: "GK", pos: "POR", x: 150, y: 388 },{ id: "CB1", pos: "DFC", x: 90, y: 330 },{ id: "CB2", pos: "DFC", x: 150, y: 340 },{ id: "CB3", pos: "DFC", x: 210, y: 330 },{ id: "LM", pos: "MI", x: 90, y: 230 },{ id: "RM", pos: "MD", x: 210, y: 230 },{ id: "ST", pos: "DC", x: 150, y: 100 }],
+    "2-2-2": [{ id: "GK", pos: "POR", x: 150, y: 388 },{ id: "LB", pos: "LI", x: 90, y: 320 },{ id: "RB", pos: "LD", x: 210, y: 320 },{ id: "LM", pos: "MI", x: 90, y: 220 },{ id: "RM", pos: "MD", x: 210, y: 220 },{ id: "ST1", pos: "DC", x: 100, y: 110 },{ id: "ST2", pos: "DC", x: 200, y: 110 }],
+    "3-1-2": [{ id: "GK", pos: "POR", x: 150, y: 388 },{ id: "CB1", pos: "DFC", x: 90, y: 330 },{ id: "CB2", pos: "DFC", x: 150, y: 340 },{ id: "CB3", pos: "DFC", x: 210, y: 330 },{ id: "CM", pos: "MC", x: 150, y: 230 },{ id: "ST1", pos: "DC", x: 100, y: 110 },{ id: "ST2", pos: "DC", x: 200, y: 110 }]
+  };
+  const DEFAULT_SLOTS_F5 = {
+    "2-1-1": [{ id: "GK", pos: "POR", x: 150, y: 380 },{ id: "LB", pos: "LI", x: 100, y: 290 },{ id: "RB", pos: "LD", x: 200, y: 290 },{ id: "CM", pos: "MC", x: 150, y: 200 },{ id: "ST", pos: "DC", x: 150, y: 100 }],
+    "1-2-1": [{ id: "GK", pos: "POR", x: 150, y: 380 },{ id: "CB", pos: "DFC", x: 150, y: 300 },{ id: "LM", pos: "MI", x: 100, y: 200 },{ id: "RM", pos: "MD", x: 200, y: 200 },{ id: "ST", pos: "DC", x: 150, y: 100 }]
+  };
+  const FORMATS = {
+    f11: { label: "Fútbol 11", minPlayers: 11, formations: DEFAULT_SLOTS_F11, defaultParts: 2, defaultPartMinutes: 35 },
+    f7: { label: "Fútbol 7", minPlayers: 7, formations: DEFAULT_SLOTS_F7, defaultParts: 4, defaultPartMinutes: 12 },
+    f5: { label: "Fútbol 5", minPlayers: 5, formations: DEFAULT_SLOTS_F5, defaultParts: 2, defaultPartMinutes: 15 }
+  };
+  const TEAMS_KEY = "equipos";
+  const CURRENT_TEAM_KEY = "equipo-actual";
+  const DATA_VERSION = 5;
+  const DATA_VERSION_KEY = "data-version";
+  const ABSENCE_LABELS = { injury: "🤕 Lesión", team: "👥 Decisión de equipo", absent: "❓ Ausente", unjustified: "🚫 Ausente sin justificar" };
+  const MATCH_TYPE_LABELS = { liga: "🏆 Liga", amistoso: "🤝 Amistoso" };
+  const MATCH_TYPE_COLORS = { liga: "#4A7FB5", amistoso: "#8A9A8F" };
+  const POSITIONS = [
+    { id: "POR", label: "Portero", color: "#E8A93F" },
+    { id: "DEF", label: "Defensa", color: "#4A7FB5" },
+    { id: "MED", label: "Centrocampista", color: "#3FA65A" },
+    { id: "DEL", label: "Delantero", color: "#E2604A" }
+  ];
+  const PLAYER_IDS_TO_REMOVE = ["s13b-eric2"];
+  const SEED_TEAMS = [
+    { id: "seed-f7-s9a", name: "S9A", crest: null, format: "f7", category: "1ª División Benjamín S9 Grupo 13", numParts: 4, partMinutes: 12, formationKey: "2-3-1", customSlots: [], defaultSlots: {}, matchHistory: [], upcoming: [], liveMatch: null, players: [
+      { id: "s9a-kiko", name: "Kiko", number: "1", positions: ["POR"] },
+      { id: "s9a-biel", name: "Biel", number: "11", positions: ["DEF"] },
+      { id: "s9a-mateo", name: "Mateo", number: "6", positions: ["DEF", "DEL"] },
+      { id: "s9a-eros", name: "Eros", number: "13", positions: ["MED"] },
+      { id: "s9a-hugo", name: "Hugo", number: "9", positions: ["DEL", "MED"] },
+      { id: "s9a-quim", name: "Quim", number: "17", positions: ["MED", "DEL"] },
+      { id: "s9a-sahjid", name: "Sahjid", number: "8", positions: ["MED"] },
+      { id: "s9a-derek", name: "Derek", number: "19", positions: ["MED"] },
+      { id: "s9a-ayman", name: "Ayman", number: "5", positions: ["DEL", "DEF"] },
+      { id: "s9a-david", name: "David", number: "7", positions: ["DEF", "MED"] },
+      { id: "s9a-gerard", name: "Gerard", number: "10", positions: ["DEF", "MED", "DEL"] }
+    ]},
+    { id: "seed-f11-s13b", name: "S13B", crest: null, format: "f11", category: "2ª División Infantil S13 Grupo 25", numParts: 2, partMinutes: 35, formationKey: "4-4-2", customSlots: [], defaultSlots: {}, matchHistory: [], upcoming: [], liveMatch: null, players: [
+      { id: "s13b-lucas", name: "Lucas", number: "0", positions: ["POR"] },
+      { id: "s13b-ayman", name: "Ayman", number: "0", positions: ["POR"] },
+      { id: "s13b-adria", name: "Adria", number: "0", positions: ["DEF"] },
+      { id: "s13b-alex", name: "Alex", number: "0", positions: ["DEF"] },
+      { id: "s13b-santiago", name: "Santiago", number: "0", positions: ["DEF"] },
+      { id: "s13b-bastian", name: "Bastian", number: "0", positions: ["DEF"] },
+      { id: "s13b-josue", name: "Josué", number: "0", positions: ["MED"] },
+      { id: "s13b-david", name: "David", number: "0", positions: ["MED"] },
+      { id: "s13b-marc", name: "Marc", number: "0", positions: ["MED"] },
+      { id: "s13b-guillem", name: "Guillem", number: "0", positions: ["MED"] },
+      { id: "s13b-gerard", name: "Gerard", number: "0", positions: ["MED"] },
+      { id: "s13b-julen", name: "Julen", number: "0", positions: ["DEF", "MED"] },
+      { id: "s13b-johansel", name: "Johansel", number: "0", positions: ["MED"] },
+      { id: "s13b-denilson", name: "Denilson", number: "0", positions: ["MED"] },
+      { id: "s13b-martin", name: "Martín", number: "0", positions: ["MED"] },
+      { id: "s13b-inuk", name: "Inuk", number: "0", positions: ["DEL"] },
+      { id: "s13b-eric1", name: "Eric", number: "0", positions: ["DEL"] },
+      { id: "s13b-milos", name: "Milos", number: "0", positions: ["DEL"] },
+      { id: "s13b-yongui", name: "Yongui", number: "0", positions: ["DEL"] },
+      { id: "s13b-jusepe", name: "Jusepe", number: "0", positions: ["DEL"] },
+      { id: "s13b-alejandro", name: "Alejandro", number: "0", positions: ["MED"] }
+    ]}
+  ];
+  function sanitizeTeams(teams) {
+    return teams.map(function(t) {
+      var cleanedPlayers = (t.players || []).filter(function(p) { return PLAYER_IDS_TO_REMOVE.indexOf(p.id) === -1; });
+      var cleanedHistory = (t.matchHistory || []).map(function(rec) {
+        var c = Object.assign({}, rec);
+        if (!c.matchType) c.matchType = "liga";
+        c.players = (rec.players || []).filter(function(p) { return PLAYER_IDS_TO_REMOVE.indexOf(p.id) === -1; });
+        if (c.events) c.events = c.events.filter(function(ev) { return PLAYER_IDS_TO_REMOVE.indexOf(ev.scorerId) === -1 && PLAYER_IDS_TO_REMOVE.indexOf(ev.assistId) === -1; });
+        if (c.initialLineup) { var il = Object.assign({}, c.initialLineup); Object.keys(il).forEach(function(k) { if (PLAYER_IDS_TO_REMOVE.indexOf(il[k]) !== -1) delete il[k]; }); c.initialLineup = il; }
+        if (c.lineup) { var nl = Object.assign({}, c.lineup); Object.keys(nl).forEach(function(k) { if (PLAYER_IDS_TO_REMOVE.indexOf(nl[k]) !== -1) delete nl[k]; }); c.lineup = nl; }
+        if (c.substitutions) c.substitutions = c.substitutions.filter(function(s) { if (s.type === "swap") return PLAYER_IDS_TO_REMOVE.indexOf(s.fromId) === -1 && PLAYER_IDS_TO_REMOVE.indexOf(s.toId) === -1; return PLAYER_IDS_TO_REMOVE.indexOf(s.outId) === -1 && PLAYER_IDS_TO_REMOVE.indexOf(s.inId) === -1; });
+        if (c.absences) { var na = Object.assign({}, c.absences); PLAYER_IDS_TO_REMOVE.forEach(function(pid) { delete na[pid]; }); c.absences = na; }
+        return c;
+      });
+      var cleanedUpcoming = (t.upcoming || []).map(function(u) { var c = Object.assign({}, u); if (!c.matchType) c.matchType = "liga"; return c; });
+      return Object.assign({}, t, { players: cleanedPlayers, matchHistory: cleanedHistory, upcoming: cleanedUpcoming, crest: t.crest || null, category: t.category || "" });
+    });
+  }
+  function playerColors(positions) { if (!positions || positions.length === 0) return ["#FFFFFF"]; var c = positions.map(function(p) { var f = POSITIONS.find(function(x) { return x.id === p; }); return f ? f.color : "#FFFFFF"; }); return c.length > 0 ? c : ["#FFFFFF"]; }
+  function formatTime(s) { s = Math.max(0, Math.floor(s)); var m = Math.floor(s / 60); var sec = s % 60; return m + ":" + String(sec).padStart(2, "0"); }
+  function uid() { return Math.random().toString(36).slice(2, 9); }
+  function todayISO() { return new Date().toISOString().slice(0, 10); }
+  function nowHHMM() { var d = new Date(); return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); }
+  function formatDateDisplay(iso) { try { return new Date(iso + "T00:00:00").toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric" }); } catch (e) { return iso; } }
+  function shortName(n) { if (!n) return ""; var p = n.trim().split(/\s+/); if (p.length === 1) return p[0]; return p[0] + " " + p[p.length - 1][0] + "."; }
+  function partLabel(n, t) { if (t === 2) return n === 1 ? "1ª parte" : "2ª parte"; if (t === 4) return n + "º cuarto"; return "Parte " + n; }
+  function mainButtonLabel(cp, tp, run) {
+    var last = cp >= tp;
+    if (last) return "Finalizar partido";
+    if (run) { if (tp === 2) return cp === 1 ? "Finalizar 1ª parte" : "Finalizar partido"; if (tp === 4) return "Finalizar " + cp + "º cuarto"; return "Finalizar parte " + cp; }
+    var nx = cp + 1;
+    if (tp === 2) return nx === 2 ? "Empezar 2ª parte" : "Empezar parte " + nx;
+    if (tp === 4) return "Empezar " + nx + "º cuarto";
+    return "Empezar parte " + nx;
+  }
+  function resizeImageFileToDataURL(file, size) {
+    size = size || 128;
+    return new Promise(function(resolve, reject) {
+      var reader = new FileReader();
+      reader.onload = function(evt) {
+        var img = new Image();
+        img.onload = function() {
+          try {
+            var canvas = document.createElement("canvas");
+            canvas.width = size; canvas.height = size;
+            var ctx = canvas.getContext("2d");
+            var sw = img.naturalWidth || img.width, sh = img.naturalHeight || img.height;
+            var mn = Math.min(sw, sh);
+            ctx.drawImage(img, (sw - mn) / 2, (sh - mn) / 2, mn, mn, 0, 0, size, size);
+            resolve(canvas.toDataURL("image/png"));
+          } catch (e) { reject(e); }
+        };
+        img.onerror = function() { reject(new Error("No se pudo cargar la imagen")); };
+        img.src = evt.target.result;
+      };
+      reader.onerror = function() { reject(new Error("No se pudo leer el archivo")); };
+      reader.readAsDataURL(file);
+    });
+  }
+  function TeamCrest({ crest, name, size }) {
+    size = size || 32;
+    var initial = (name || "?").trim().charAt(0).toUpperCase();
+    if (crest) return (<img src={crest} alt={name || ""} style={{ width: size, height: size, borderRadius: "50%", objectFit: "cover", background: "#18211B", border: "1.5px solid var(--line)", flexShrink: 0 }} />);
+    return (<div style={{ width: size, height: size, borderRadius: "50%", background: "var(--card-3)", color: "var(--ink-soft)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: Math.round(size * 0.5), fontFamily: "'Space Grotesk', sans-serif", border: "1.5px solid var(--line)", flexShrink: 0 }}>{initial}</div>);
+  }
+  function CrestUploader({ onCrest, children, title }) {
+    var inputRef = useRef(null);
+    function handleClick() { if (inputRef.current) inputRef.current.click(); }
+    function handleChange(e) {
+      var file = e.target.files && e.target.files[0];
+      e.target.value = "";
+      if (!file) return;
+      if (!file.type || file.type.indexOf("image/") !== 0) { alert("Selecciona una imagen (PNG, JPG…)"); return; }
+      resizeImageFileToDataURL(file, 128).then(function(u) { onCrest(u); }).catch(function() { alert("No se pudo procesar la imagen"); });
+    }
+    return (<>
+      <button type="button" onClick={handleClick} title={title || "Cambiar escudo"} style={{ background: "transparent", border: "none", padding: 0, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", position: "relative" }}>{children}</button>
+      <input ref={inputRef} type="file" accept="image/*" onChange={handleChange} style={{ display: "none" }} />
+    </>);
+  }
+  function CrestBadge({ hasCrest }) {
+    return (<div style={{ position: "absolute", right: -3, bottom: -3, width: 16, height: 16, borderRadius: "50%", background: "var(--card-3)", border: "1.5px solid var(--line)", color: "var(--ink-soft)", fontSize: 10, lineHeight: "13px", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700 }}>{hasCrest ? "✎" : "+"}</div>);
+  }
+  function MatchTypeBadge({ matchType }) {
+    var t = matchType || "liga"; var c = MATCH_TYPE_COLORS[t];
+    return (<span style={{ display: "inline-block", background: c + "22", color: c, padding: "2px 8px", borderRadius: 7, fontSize: 10, fontWeight: 700, letterSpacing: "0.03em" }}>{MATCH_TYPE_LABELS[t]}</span>);
+  }
+  function TokenCircle({ colors, r, numFontSize, fitNameFont, nameInside, showNumber, player }) {
+    var n = colors.length, circles;
+    if (n === 1) circles = <circle r={r} className="token-fill" style={{ fill: colors[0] }} />;
+    else if (n === 2) circles = (<g><path d={"M 0 " + (-r) + " A " + r + " " + r + " 0 0 0 0 " + r + " L 0 0 Z"} style={{ fill: colors[0] }} /><path d={"M 0 " + (-r) + " A " + r + " " + r + " 0 0 1 0 " + r + " L 0 0 Z"} style={{ fill: colors[1] }} /></g>);
+    else if (n === 3) {
+      var r1 = -Math.PI / 2, r2 = r1 + (2 * Math.PI / 3), r3 = r1 + (4 * Math.PI / 3);
+      var p1 = [r * Math.cos(r1), r * Math.sin(r1)], p2 = [r * Math.cos(r2), r * Math.sin(r2)], p3 = [r * Math.cos(r3), r * Math.sin(r3)];
+      circles = (<g>
+        <path d={"M 0 0 L " + p1[0] + " " + p1[1] + " A " + r + " " + r + " 0 0 1 " + p2[0] + " " + p2[1] + " Z"} style={{ fill: colors[0] }} />
+        <path d={"M 0 0 L " + p2[0] + " " + p2[1] + " A " + r + " " + r + " 0 0 1 " + p3[0] + " " + p3[1] + " Z"} style={{ fill: colors[1] }} />
+        <path d={"M 0 0 L " + p3[0] + " " + p3[1] + " A " + r + " " + r + " 0 0 1 " + p1[0] + " " + p1[1] + " Z"} style={{ fill: colors[2] }} />
+      </g>);
+    } else circles = <circle r={r} className="token-fill" style={{ fill: "#FFFFFF" }} />;
+    return (<g>{circles}{player && <g>
+      {showNumber && <text textAnchor="middle" dy={-r * 0.6} className="token-number" style={{ fontSize: numFontSize, fill: "#FFFFFF" }}>{player.number}</text>}
+      <text textAnchor="middle" dy={showNumber ? r * 0.3 : fitNameFont * 0.35} className="token-name-inside" style={{ fontSize: fitNameFont, fill: "#FFFFFF" }}>{nameInside}</text>
+    </g>}</g>);
+  }
+  function ColorDot({ colors, text, size }) {
+    size = size || 28; var r = size / 2, n = colors.length, shapes;
+    if (n === 1) shapes = <circle r={r} cx={0} cy={0} style={{ fill: colors[0] }} />;
+    else if (n === 2) shapes = (<g>
+      <path d={"M 0 " + (-r) + " A " + r + " " + r + " 0 0 0 0 " + r + " L 0 0 Z"} style={{ fill: colors[0] }} />
+      <path d={"M 0 " + (-r) + " A " + r + " " + r + " 0 0 1 0 " + r + " L 0 0 Z"} style={{ fill: colors[1] }} />
+    </g>);
+    else if (n === 3) {
+      var r1 = -Math.PI / 2, r2 = r1 + (2 * Math.PI / 3), r3 = r1 + (4 * Math.PI / 3);
+      var p1 = [r * Math.cos(r1), r * Math.sin(r1)], p2 = [r * Math.cos(r2), r * Math.sin(r2)], p3 = [r * Math.cos(r3), r * Math.sin(r3)];
+      shapes = (<g>
+        <path d={"M 0 0 L " + p1[0] + " " + p1[1] + " A " + r + " " + r + " 0 0 1 " + p2[0] + " " + p2[1] + " Z"} style={{ fill: colors[0] }} />
+        <path d={"M 0 0 L " + p2[0] + " " + p2[1] + " A " + r + " " + r + " 0 0 1 " + p3[0] + " " + p3[1] + " Z"} style={{ fill: colors[1] }} />
+        <path d={"M 0 0 L " + p3[0] + " " + p3[1] + " A " + r + " " + r + " 0 0 1 " + p1[0] + " " + p1[1] + " Z"} style={{ fill: colors[2] }} />
+      </g>);
+    } else shapes = <circle r={r} cx={0} cy={0} style={{ fill: "#FFF" }} />;
+    return (<div style={{ width: size, height: size, position: "relative", flexShrink: 0 }}>
+      <svg width={size} height={size} viewBox={(-r) + " " + (-r) + " " + size + " " + size} style={{ position: "absolute", inset: 0, borderRadius: "50%", overflow: "hidden" }}>{shapes}</svg>
+      <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 12, fontFamily: "'Space Grotesk', sans-serif", color: "#FFFFFF" }}>{text}</div>
+    </div>);
+  }
+  function MarkIcon() { return (<svg width="28" height="28" viewBox="0 0 30 30" fill="none"><circle cx="14" cy="16" r="10" stroke="#EDF3EE" strokeWidth="2" /><path d="M14 9.5l3.6 2.6-1.4 4.2h-4.4l-1.4-4.2z" fill="#EDF3EE" /><path d="M14 6v-2.6M11 3.4h6" stroke="#EDF3EE" strokeWidth="2" strokeLinecap="round" /><circle cx="14" cy="16" r="1.6" fill="#0B2416" /></svg>); }
+  function IconPlayers({ active }) { var c = active ? "#3FA65A" : "#8A9A8F"; return (<svg width="21" height="21" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="3.2" stroke={c} strokeWidth="1.8" /><path d="M3.3 19c0-3.3 2.5-5.6 5.7-5.6s5.7 2.3 5.7 5.6" stroke={c} strokeWidth="1.8" strokeLinecap="round" /><circle cx="17.3" cy="8.8" r="2.5" stroke={c} strokeWidth="1.6" /><path d="M15 18.6c.1-2.5 1.7-4.4 4-4.7" stroke={c} strokeWidth="1.6" strokeLinecap="round" /></svg>); }
+  function IconMatch({ active }) { var c = active ? "#3FA65A" : "#8A9A8F"; return (<svg width="21" height="21" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8.6" stroke={c} strokeWidth="1.8" /><path d="M12 7.2l3.2 2.3-1.2 3.8h-4l-1.2-3.8z" fill={c} /><path d="M12 3.4v1.6M20.6 12h-1.6M4.9 12H3.3" stroke={c} strokeWidth="1.6" strokeLinecap="round" /></svg>); }
+  function IconStats({ active }) { var c = active ? "#3FA65A" : "#8A9A8F"; return (<svg width="21" height="21" viewBox="0 0 24 24" fill="none"><rect x="4" y="12" width="4" height="8" rx="1" fill={c} /><rect x="10" y="7" width="4" height="13" rx="1" fill={c} /><rect x="16" y="3.5" width="4" height="16.5" rx="1" fill={c} /></svg>); }
+  function PitchBackground() {
+    return (<g>
+      <defs><linearGradient id="grassGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#1E5A32" /><stop offset="50%" stopColor="#1A4D2B" /><stop offset="100%" stopColor="#1E5A32" /></linearGradient></defs>
+      <rect x="4" y="4" width="292" height="412" rx="10" fill="url(#grassGrad)" />
+      {[0,1,2,3,4,5,6,7,8,9,10].map(function(i) { return <rect key={i} x="4" y={4 + i * (412 / 11)} width="292" height={412 / 11} fill={i % 2 === 0 ? "rgba(0,0,0,0.04)" : "rgba(255,255,255,0.02)"} />; })}
+      <rect x="4" y="4" width="292" height="412" rx="10" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="2" />
+      <line x1="4" y1="210" x2="296" y2="210" stroke="rgba(255,255,255,0.4)" strokeWidth="2" />
+      <circle cx="150" cy="210" r="42" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="2" />
+      <circle cx="150" cy="210" r="3" fill="rgba(255,255,255,0.5)" />
+      <rect x="80" y="4" width="140" height="66" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.4)" strokeWidth="2" />
+      <rect x="118" y="4" width="64" height="26" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.4)" strokeWidth="2" />
+      <rect x="80" y="350" width="140" height="66" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.4)" strokeWidth="2" />
+      <rect x="118" y="390" width="64" height="26" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.4)" strokeWidth="2" />
+    </g>);
+  }
+  function computeLineupAtMinute(initialLineup, events, minute) {
+    var result = Object.assign({}, initialLineup);
+    if (!events || events.length === 0) return result;
+    var ordered = events.slice().sort(function(a, b) { if (a.min !== b.min) return a.min - b.min; return (a.seq || 0) - (b.seq || 0); });
+    ordered.forEach(function(ev) {
+      if (ev.min > minute) return;
+      if (ev.type === "swap") {
+        var a = result[ev.fromSlot], b = result[ev.toSlot];
+        if (b) result[ev.fromSlot] = b; else delete result[ev.fromSlot];
+        if (a) result[ev.toSlot] = a; else delete result[ev.toSlot];
+      } else {
+        Object.keys(result).forEach(function(s) { if (result[s] === ev.outId) result[s] = ev.inId; });
+      }
+    });
+    return result;
+  }
+  function Pitch({ formation, slots, lineup, players, selected, onSlotTap, statusFor, cardsFor, scale, onPitchTap, onSlotDrag, draggable }) {
+    scale = scale || 1;
+    var byId = Object.fromEntries(players.map(function(p) { return [p.id, p]; }));
+    var baseR = 22 * scale, nameBase = 12 * scale, numFontSize = 10 * scale;
+    var chipFontSize = 9.5 * scale, chipW = 42 * scale, chipH = 15 * scale;
+    var svgRef = useRef(null);
+    var dragRef = useRef({ active: false, slotId: null, startX: 0, startY: 0, moved: false, timer: null });
+    var ds = useState(null); var dragState = ds[0]; var setDragState = ds[1];
+    function clientToSvg(cx, cy) { var svg = svgRef.current; if (!svg) return { x: 0, y: 0 }; var r = svg.getBoundingClientRect(); return { x: ((cx - r.left) / r.width) * 300, y: ((cy - r.top) / r.height) * 420 }; }
+    function handleEmptyTap(e) { if (!onPitchTap) return; if (dragRef.current.moved) { dragRef.current.moved = false; return; } var svg = svgRef.current; if (!svg) return; var r = svg.getBoundingClientRect(); var x = ((e.clientX - r.left) / r.width) * 300, y = ((e.clientY - r.top) / r.height) * 420; onPitchTap(Math.max(20, Math.min(280, x)), Math.max(20, Math.min(400, y))); }
+    function onTokenPointerDown(e, slotId) { if (!draggable) return; e.stopPropagation(); var p = clientToSvg(e.clientX, e.clientY); dragRef.current = { active: false, slotId: slotId, startX: p.x, startY: p.y, moved: false, timer: setTimeout(function() { dragRef.current.active = true; setDragState({ slotId: slotId }); if (navigator.vibrate) navigator.vibrate(15); }, 300) }; }
+    function onPointerMoveGlobal(e) { var d = dragRef.current; if (!d.slotId) return; var p = clientToSvg(e.clientX, e.clientY); var dist = Math.hypot(p.x - d.startX, p.y - d.startY); if (!d.active && dist > 8) { if (d.timer) { clearTimeout(d.timer); d.timer = null; } d.slotId = null; return; } if (d.active) { d.moved = true; if (onSlotDrag) onSlotDrag(d.slotId, Math.max(20, Math.min(280, p.x)), Math.max(20, Math.min(400, p.y))); } }
+    function onPointerUpGlobal() { var d = dragRef.current; if (d.timer) clearTimeout(d.timer); if (!d.active && d.slotId) onSlotTap(d.slotId); dragRef.current = { active: false, slotId: null, startX: 0, startY: 0, moved: false, timer: null }; setDragState(null); }
+    useEffect(function() { window.addEventListener("pointermove", onPointerMoveGlobal); window.addEventListener("pointerup", onPointerUpGlobal); window.addEventListener("pointercancel", onPointerUpGlobal); return function() { window.removeEventListener("pointermove", onPointerMoveGlobal); window.removeEventListener("pointerup", onPointerUpGlobal); window.removeEventListener("pointercancel", onPointerUpGlobal); }; });
+    var list = slots || formation.slots;
+    return (<svg ref={svgRef} viewBox="0 0 300 420" className="pitch-svg" preserveAspectRatio="xMidYMid meet" role="img" style={{ overflow: "visible", touchAction: draggable ? "none" : "auto", width: "100%", height: "100%", maxHeight: "100%", display: "block" }} onClick={handleEmptyTap} onPointerDown={function(e) { if (!draggable) return; var p = clientToSvg(e.clientX, e.clientY); dragRef.current.startX = p.x; dragRef.current.startY = p.y; }}>
+      <PitchBackground />
+      {list.map(function(slot) {
+        var pid = lineup[slot.id]; var player = pid ? byId[pid] : null;
+        var isSel = selected && selected.type === "slot" && selected.id === slot.id;
+        var status = player ? statusFor(player.id) : null;
+        var cards = player ? cardsFor(player.id) : null;
+        var isDrag = dragState && dragState.slotId === slot.id;
+        var r = (isSel || isDrag) ? baseR * 1.15 : baseR;
+        var nameInside = player ? shortName(player.name) : "";
+        var len = nameInside.length;
+        var fitNameFont = len <= 5 ? nameBase : len <= 8 ? nameBase * 0.85 : len <= 11 ? nameBase * 0.7 : nameBase * 0.58;
+        var showNumber = player && player.number && player.number !== "0" && player.number !== 0;
+        var colors = player ? playerColors(player.positions) : null;
+        return (<g key={slot.id} transform={"translate(" + slot.x + " " + slot.y + ")"} className="token-group" onPointerDown={function(e) { onTokenPointerDown(e, slot.id); }}>
+          <circle r={r + 2} fill="rgba(0,0,0,0.4)" />
+          {player ? (<g className={"token-circle " + (isSel ? " token-selected" : "") + (isDrag ? " token-dragging" : "") + (status === "amber" ? " token-amber" : "")}><TokenCircle colors={colors} r={r} numFontSize={numFontSize} fitNameFont={fitNameFont} nameInside={nameInside} showNumber={showNumber} player={player} /></g>) : (<g><circle r={r} className="token-circle token-empty" /><text textAnchor="middle" dy={nameBase * 0.3} className="token-pos" style={{ fontSize: nameBase * 0.7 }}>{slot.pos}</text></g>)}
+          {cards && cards.red > 0 && <circle cx={r * 0.72} cy={-r * 0.72} r={5 * scale} className="dot-red" />}
+          {cards && cards.red === 0 && cards.yellow > 0 && <circle cx={r * 0.72} cy={-r * 0.72} r={5 * scale} className="dot-yellow" />}
+          {player && <g transform={"translate(0 " + (r + 12 * scale) + ")"}><rect x={-(chipW / 2)} y={-(chipH / 2)} width={chipW} height={chipH} rx={chipH / 2} className="chip-bg" /><text textAnchor="middle" dy={chipFontSize * 0.32} className="chip-text" style={{ fontSize: chipFontSize }}>{formatTime(player.seconds)}</text></g>}
+        </g>);
+      })}
+    </svg>);
+  }
+  function PlayerRow({ player, onTap, selected, showTime, status, extraRight, cards, absence }) {
+    var colors = playerColors(player.positions);
+    var showNum = player.number && player.number !== "0" && player.number !== 0;
+    return (<div className={"list-row" + (selected ? " list-row-selected" : "") + (absence ? " list-row-absence" : "")} onClick={onTap}>
+      <ColorDot colors={colors} text={showNum ? player.number : "·"} />
+      <div className="row-name">
+        {player.name}
+        {player.positions && player.positions.length > 0 && <span className="pos-tags">{player.positions.map(function(p) { return <span key={p} className="pos-tag" style={{ background: (POSITIONS.find(function(x) { return x.id === p; }) || {}).color || "#FFF" }}>{p}</span>; })}</span>}
+        {absence && <span className="mini-tag absence">{ABSENCE_LABELS[absence]}</span>}
+        {cards && cards.yellow > 0 && <span className="mini-tag yellow">🟨{cards.yellow > 1 ? cards.yellow : ""}</span>}
+        {cards && cards.red > 0 && <span className="mini-tag red">🟥</span>}
+      </div>
+      {showTime && <div className={"row-time" + (status === "amber" ? " tag-amber" : "")}>{formatTime(player.seconds)}</div>}
+      {extraRight}
+    </div>);
+  }
+  function CardRow({ player, onAdd, onRemove }) {
+    return (<div className="card-row">
+      <div className="row-name">{player.name}</div>
+      <div className="card-controls">
+        <button className="card-btn yellow" onClick={function() { onAdd("yellow"); }}>🟨</button>
+        <span className="card-count">{player.cards.yellow}</span>
+        {player.cards.yellow > 0 && <button className="card-undo" onClick={function() { onRemove("yellow"); }}>↺</button>}
+        <button className="card-btn red" onClick={function() { onAdd("red"); }}>🟥</button>
+        <span className="card-count">{player.cards.red}</span>
+        {player.cards.red > 0 && <button className="card-undo" onClick={function() { onRemove("red"); }}>↺</button>}
+      </div>
+    </div>);
+  }
+  function GoalModal({ mode, players, onCancel, onConfirm }) {
+    var a1 = useState(null); var scorerId = a1[0]; var setScorerId = a1[1];
+    var a2 = useState("scorer"); var step = a2[0]; var setStep = a2[1];
+    if (mode === "rival") return (<div className="modal-backdrop" onClick={onCancel}><div className="modal-sheet" onClick={function(e) { e.stopPropagation(); }}><div className="modal-header"><h2 style={{ margin: 0 }}>Gol del rival</h2><button className="modal-close" onClick={onCancel}>×</button></div><p className="card-hint">Se sumará un gol al rival. ¿Confirmas?</p><div className="actions-row" style={{ marginTop: 12 }}><button className="btn btn-ghost" onClick={onCancel}>Cancelar</button><button className="btn btn-primary" onClick={function() { onConfirm(null, null, true); }}>Sí, gol del rival</button></div></div></div>);
+    var scorer = players.find(function(p) { return p.id === scorerId; });
+    var candidatesAssist = players.filter(function(p) { return p.id !== scorerId; });
+    return (<div className="modal-backdrop" onClick={onCancel}><div className="modal-sheet" onClick={function(e) { e.stopPropagation(); }}>
+      <div className="modal-header"><h2 style={{ margin: 0 }}>{step === "scorer" ? "¿Quién ha marcado?" : "¿Hubo asistencia?"}</h2><button className="modal-close" onClick={onCancel}>×</button></div>
+      {step === "scorer" && <div><p className="card-hint">Toca el goleador.</p><div className="list">{players.map(function(p) { return <PlayerRow key={p.id} player={p} onTap={function() { setScorerId(p.id); setStep("assist"); }} showTime={false} />; })}</div></div>}
+      {step === "assist" && <div><p className="card-hint">Goleador: <b>{scorer ? scorer.name : ""}</b>.</p><button className="btn btn-ghost btn-block" style={{ marginBottom: 10 }} onClick={function() { onConfirm(scorerId, null, false); }}>Sin asistencia</button><div className="list">{candidatesAssist.map(function(p) { return <PlayerRow key={p.id} player={p} onTap={function() { onConfirm(scorerId, p.id, false); }} showTime={false} />; })}</div><div className="actions-row" style={{ marginTop: 12 }}><button className="btn btn-ghost" onClick={function() { setStep("scorer"); setScorerId(null); }}>← Cambiar goleador</button></div></div>}
+    </div></div>);
+  }
+  function NewTeamModal({ onCreate, onCancel }) {
+    var a1 = useState(""); var name = a1[0]; var setName = a1[1];
+    var a2 = useState("f11"); var format = a2[0]; var setFormat = a2[1];
+    var a3 = useState(""); var category = a3[0]; var setCategory = a3[1];
+    return (<div className="modal-backdrop" onClick={onCancel}><div className="modal-sheet" onClick={function(e) { e.stopPropagation(); }}>
+      <div className="modal-header"><h2 style={{ margin: 0 }}>Nuevo equipo</h2><button className="modal-close" onClick={onCancel}>×</button></div>
+      <label className="field-label">Nombre del equipo</label>
+      <input className="input" value={name} onChange={function(e) { setName(e.target.value); }} placeholder="Ej. Alevín A" autoFocus />
+      <label className="field-label" style={{ marginTop: 14 }}>Categoría (opcional)</label>
+      <input className="input" value={category} onChange={function(e) { setCategory(e.target.value); }} placeholder="Ej. 1ª División Benjamín Grupo 13" />
+      <label className="field-label" style={{ marginTop: 14 }}>Formato</label>
+      <div className="formation-grid">{Object.entries(FORMATS).map(function(en) { var k = en[0]; var f = en[1]; return <div key={k} className={"formation-chip" + (format === k ? " active" : "")} onClick={function() { setFormat(k); }}>{f.label} · {f.defaultParts}×{f.defaultPartMinutes}′</div>; })}</div>
+      <div className="actions-row" style={{ marginTop: 16 }}><button className="btn btn-ghost" onClick={onCancel}>Cancelar</button><button className="btn btn-primary" disabled={!name.trim()} onClick={function() { onCreate(name.trim(), format, category.trim()); }}>Crear</button></div>
+    </div></div>);
+  }
+  function AddPlayerModal({ onAdd, onCancel, existing }) {
+    var a1 = useState(""); var name = a1[0]; var setName = a1[1];
+    var a2 = useState(existing ? existing.number : "0"); var number = a2[0]; var setNumber = a2[1];
+    var a3 = useState(existing ? (existing.positions || []) : []); var positions = a3[0]; var setPositions = a3[1];
+    function togglePos(id) { setPositions(function(prev) { return prev.includes(id) ? prev.filter(function(x) { return x !== id; }) : prev.concat([id]); }); }
+    useEffect(function() { if (existing) { setName(existing.name || ""); setNumber(existing.number || "0"); setPositions(existing.positions || []); } }, [existing]);
+    return (<div className="modal-backdrop" onClick={onCancel}><div className="modal-sheet" onClick={function(e) { e.stopPropagation(); }}>
+      <div className="modal-header"><h2 style={{ margin: 0 }}>{existing ? "Editar jugador" : "Nuevo jugador"}</h2><button className="modal-close" onClick={onCancel}>×</button></div>
+      <label className="field-label">Nombre</label>
+      <input className="input" value={name} onChange={function(e) { setName(e.target.value); }} placeholder="Nombre" autoFocus />
+      <label className="field-label" style={{ marginTop: 14 }}>Dorsal (0 = sin número)</label>
+      <input className="input" type="number" value={number} onChange={function(e) { setNumber(e.target.value); }} placeholder="0" style={{ maxWidth: 120 }} />
+      <label className="field-label" style={{ marginTop: 14 }}>Posición (varias posibles)</label>
+      <div className="pos-grid">{POSITIONS.map(function(p) { return <div key={p.id} className={"pos-chip" + (positions.includes(p.id) ? " active" : "")} style={positions.includes(p.id) ? { background: p.color, borderColor: p.color, color: "#0A0F0C" } : {}} onClick={function() { togglePos(p.id); }}>{p.label}</div>; })}</div>
+      <p className="card-hint" style={{ marginTop: 10 }}>Si eliges más de una, se verán los colores en gajos.</p>
+      <div className="actions-row" style={{ marginTop: 16 }}><button className="btn btn-ghost" onClick={onCancel}>Cancelar</button><button className="btn btn-primary" disabled={!name.trim()} onClick={function() { onAdd({ name: name.trim(), number: number || "0", positions: positions }); }}>{existing ? "Guardar" : "Añadir"}</button></div>
+    </div></div>);
+  }
+  function MatchTeamSelector({ teams, onSelect, onCancel }) {
+    return (<div className="modal-backdrop" onClick={onCancel}><div className="modal-sheet" onClick={function(e) { e.stopPropagation(); }}>
+      <div className="modal-header"><h2 style={{ margin: 0 }}>¿Con qué equipo juegas?</h2><button className="modal-close" onClick={onCancel}>×</button></div>
+      <p className="card-hint">Elige el equipo para este partido.</p>
+      <div className="list">{teams.map(function(t) { var fmt = FORMATS[t.format || "f11"]; var n = (t.players || []).length; return (<div key={t.id} className="list-row" onClick={function() { onSelect(t.id); }}><TeamCrest crest={t.crest} name={t.name} size={32} /><div className="row-name"><b>{t.name || "Sin nombre"}</b><span className="team-format-tag">{fmt.label}</span><span style={{ color: "var(--ink-soft)", fontSize: 11.5, fontWeight: 500, width: "100%", marginTop: 2 }}>{n} jugador{n === 1 ? "" : "es"} · {t.numParts || fmt.defaultParts}×{t.partMinutes || fmt.defaultPartMinutes}′</span></div><span style={{ color: "var(--ink-soft)", fontSize: 13 }}>Elegir →</span></div>); })}</div>
+      <button className="btn btn-ghost btn-block" style={{ marginTop: 12 }} onClick={onCancel}>Cancelar</button>
+    </div></div>);
+  }
+  function GoalsModal({ title, goals, players, onDelete, onClose }) {
+    return (<div className="modal-backdrop" onClick={onClose}><div className="modal-sheet" onClick={function(e) { e.stopPropagation(); }}>
+      <div className="modal-header"><h2 style={{ margin: 0 }}>Goles · {title}</h2><button className="modal-close" onClick={onClose}>×</button></div>
+      {goals.length === 0 && <div className="empty-note">Todavía no hay goles de {title}.</div>}
+      {goals.length > 0 && <div className="list" style={{ marginTop: 10 }}>
+        {goals.slice().sort(function(a, b) { return a.time - b.time; }).map(function(ev) {
+          return (<div className="list-row" key={ev.id} style={{ cursor: "default" }}>
+            <div className="row-name">⚽ Min {Math.floor((ev.time || 0) / 60)} · <b>{ev.scorerName || "?"}</b>{ev.assistName ? <span style={{ color: "var(--ink-soft)" }}> (asist. {ev.assistName})</span> : null}</div>
+            {onDelete && <button className="row-remove" onClick={function() { onDelete(ev); }}>🗑️</button>}
+          </div>);
+        })}
+      </div>}
+      <button className="btn btn-ghost btn-block" style={{ marginTop: 14 }} onClick={onClose}>Cerrar</button>
+    </div></div>);
+  }
+  function TimelineView({ record, baseSlots }) {
+    var a1 = useState(0); var minute = a1[0]; var setMinute = a1[1];
+    var maxMin = Math.max(1, Math.floor((record.matchSeconds || 0) / 60));
+    var events = record.substitutions || [];
+    var initialLineup = (record.initialLineup && Object.keys(record.initialLineup).length > 0) ? record.initialLineup : (record.lineup || {});
+    var hasTimeline = Object.keys(initialLineup).length > 0;
+    if (!hasTimeline || !baseSlots) return null;
+    var lineupAtMin = computeLineupAtMinute(initialLineup, events, minute);
+    var byId = {};
+    (record.players || []).forEach(function(p) { byId[p.id] = p; });
+    var homeAt = 0, awayAt = 0;
+    (record.events || []).forEach(function(ev) { var m = Math.floor((ev.time || 0) / 60); if (m <= minute) { if (ev.team === "own") homeAt++; else awayAt++; } });
+    var scale = 1, baseR = 20 * scale, nameBase = 11 * scale, numFontSize = 9 * scale;
+    return (<div style={{ marginBottom: 12 }}>
+      <h3 style={{ fontSize: 13, marginBottom: 6, color: "var(--ink-soft)" }}>Línea de tiempo del partido</h3>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 6, fontFamily: "'Space Grotesk',sans-serif", fontWeight: 700, fontSize: 14 }}>
+        <span>{record.teamName || "Nosotros"} {homeAt}</span><span style={{ color: "var(--ink-soft)" }}>–</span><span>{awayAt} {record.rival}</span>
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+        <span style={{ fontFamily: "'Space Grotesk',sans-serif", fontWeight: 700, fontSize: 13, minWidth: 44 }}>Min {minute}</span>
+        <input type="range" min="0" max={maxMin} value={minute} onChange={function(e) { setMinute(Number(e.target.value)); }} style={{ flex: 1, accentColor: "#4CAF6A" }} />
+        <span style={{ fontFamily: "'Space Grotesk',sans-serif", fontWeight: 700, fontSize: 12, color: "var(--ink-soft)" }}>{maxMin}′</span>
+      </div>
+      <div className="pitch-wrap" style={{ padding: 4 }}>
+        <svg viewBox="0 0 300 420" className="pitch-svg" preserveAspectRatio="xMidYMid meet" style={{ width: "100%", height: "auto", display: "block" }}>
+          <PitchBackground />
+          {baseSlots.map(function(slot) {
+            var pid = lineupAtMin[slot.id]; var player = pid ? byId[pid] : null;
+            var r = baseR;
+            var nameInside = player ? shortName(player.name) : "";
+            var len = nameInside.length;
+            var fitNameFont = len <= 5 ? nameBase : len <= 8 ? nameBase * 0.85 : len <= 11 ? nameBase * 0.7 : nameBase * 0.58;
+            var showNumber = player && player.number && player.number !== "0" && player.number !== 0;
+            var colors = player ? playerColors(player.positions) : null;
+            return (<g key={slot.id} transform={"translate(" + slot.x + " " + slot.y + ")"}>
+              <circle r={r + 2} fill="rgba(0,0,0,0.4)" />
+              {player ? (<g className="token-circle"><TokenCircle colors={colors} r={r} numFontSize={numFontSize} fitNameFont={fitNameFont} nameInside={nameInside} showNumber={showNumber} player={player} /></g>) : (<g><circle r={r} className="token-circle token-empty" /><text textAnchor="middle" dy={nameBase * 0.3} className="token-pos" style={{ fontSize: nameBase * 0.7 }}>{slot.pos}</text></g>)}
+            </g>);
+          })}
+        </svg>
+      </div>
+      {events.length > 0 && <div style={{ marginTop: 8 }}>
+        <div style={{ fontSize: 11, color: "var(--ink-soft)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 4 }}>Cambios ({events.length})</div>
+        {events.slice().sort(function(a, b) { return a.min - b.min || (a.seq || 0) - (b.seq || 0); }).map(function(ev, idx) {
+          var isPast = ev.min <= minute;
+          if (ev.type === "swap") {
+            var pA = byId[ev.fromId], pB = byId[ev.toId];
+            return <div key={idx} style={{ fontSize: 12.5, padding: "4px 0", borderBottom: "1px solid var(--line)", opacity: isPast ? 1 : 0.4 }}><b>Min {ev.min}</b> · Cambio de posición: {pA ? pA.name : "?"} ↔ {pB ? pB.name : "?"}</div>;
+          } else {
+            var outP = byId[ev.outId], inP = byId[ev.inId];
+            return <div key={idx} style={{ fontSize: 12.5, padding: "4px 0", borderBottom: "1px solid var(--line)", opacity: isPast ? 1 : 0.4 }}><b>Min {ev.min}</b> · Sale {outP ? outP.name : "?"} · Entra {inP ? inP.name : "?"}</div>;
+          }
+        })}
+      </div>}
+    </div>);
+  }
+  function MatchDetailModal({ record, onClose, onDeleteGoal, onEdit }) {
+    if (!record) return null;
+    var fmt = FORMATS[record.teamFormat || "f11"];
+    var predefinedSlots = record.formationKey && record.formationKey !== "CUSTOM" && fmt.formations[record.formationKey] ? fmt.formations[record.formationKey] : null;
+    return (<div className="modal-backdrop" onClick={onClose}><div className="modal-sheet" onClick={function(e) { e.stopPropagation(); }}>
+      <div className="modal-header"><h2 style={{ margin: 0 }}>Detalle del partido</h2><button className="modal-close" onClick={onClose}>×</button></div>
+      {onEdit && <button className="btn btn-ghost btn-small" style={{ marginBottom: 10 }} onClick={onEdit}>✎ Editar partido</button>}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+        <TeamCrest crest={record.teamCrest} name={record.teamName} size={36} />
+        <div className="score-result" style={{ flex: 1, textAlign: "center", margin: 0 }}>{record.teamName || "Nosotros"} {record.home} – {record.away} {record.rival}</div>
+        <TeamCrest crest={record.rivalCrest} name={record.rival} size={36} />
+      </div>
+      <div style={{ display: "flex", gap: 6, justifyContent: "center", marginBottom: 6 }}><MatchTypeBadge matchType={record.matchType} /></div>
+      <p className="card-hint">{formatDateDisplay(record.date)} · {record.hour} · {record.venue === "local" ? "Local" : "Visitante"} · {fmt.label} · Duración: {formatTime(record.matchSeconds)}</p>
+      {(record.partScores || []).length > 0 && <div style={{ marginBottom: 12 }}><h3 style={{ fontSize: 13, marginBottom: 6, color: "var(--ink-soft)" }}>Por partes</h3>{record.partScores.map(function(ps) { return <div key={ps.part} style={{ fontSize: 13, padding: "4px 0" }}>{partLabel(ps.part, record.numParts || 2)}: {record.teamName || "Nosotros"} {ps.home} – {ps.away} {record.rival} · {formatTime(ps.seconds)}</div>; })}</div>}
+      {(record.events || []).length > 0 && <div style={{ marginBottom: 12 }}>
+        <h3 style={{ fontSize: 13, marginBottom: 6, color: "var(--ink-soft)" }}>Goles</h3>
+        {record.events.map(function(ev) {
+          return (<div key={ev.id} style={{ fontSize: 13, padding: "6px 0", borderBottom: "1px solid var(--line)", display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ flex: 1 }}>⚽ {partLabel(ev.part || 1, record.numParts || 2)} {formatTime(ev.time)} · <b>{ev.scorerName}</b>{ev.assistName ? <span> (asist. {ev.assistName})</span> : null}</span>
+            {onDeleteGoal && <button className="row-remove" onClick={function() { onDeleteGoal(ev); }} title="Borrar gol">🗑️</button>}
+          </div>);
+        })}
+      </div>}
+      {record.absences && Object.keys(record.absences).length > 0 && <div style={{ marginBottom: 12 }}><h3 style={{ fontSize: 13, marginBottom: 6, color: "var(--ink-soft)" }}>Ausencias</h3>{Object.entries(record.absences).map(function(en) { var pid = en[0]; var reason = en[1]; var p = (record.players || []).find(function(x) { return x.id === pid; }); var name = p ? p.name : pid; return <div key={pid} style={{ fontSize: 13, padding: "4px 0" }}>{ABSENCE_LABELS[reason]} — {name}</div>; })}</div>}
+      {predefinedSlots && <TimelineView record={record} baseSlots={predefinedSlots} />}
+      <h3 style={{ fontSize: 13, marginBottom: 6, color: "var(--ink-soft)" }}>Estadísticas del partido</h3>
+      <table className="summary-table"><thead><tr><th>Jugador</th><th>Min</th><th>%</th><th>⚽</th><th>🅰️</th><th>🟨</th><th>🟥</th></tr></thead><tbody>
+        {(record.players || []).slice().sort(function(a, b) { return b.seconds - a.seconds; }).map(function(p) {
+          var c = p.cards || { yellow: 0, red: 0 };
+          var g = (record.events || []).filter(function(ev) { return ev.type === "goal" && ev.scorerId === p.id; }).length;
+          var a = (record.events || []).filter(function(ev) { return ev.type === "goal" && ev.assistId === p.id; }).length;
+          return <tr key={p.id}><td>{p.name}</td><td className="t-num">{formatTime(p.seconds)}</td><td>{record.matchSeconds > 0 ? Math.round((p.seconds / record.matchSeconds) * 100) : 0}%</td><td className="t-num">{g || ""}</td><td className="t-num">{a || ""}</td><td className="t-num">{c.yellow || ""}</td><td className="t-num">{c.red || ""}</td></tr>;
+        })}
+      </tbody></table>
+    </div></div>);
+  }
+  function ManualMatchModal({ teams, currentTeamId, kind, initial, onSave, onCancel }) {
+    var up = kind === "upcoming";
+    var lockEv = !!initial && !initial.manual;
+    var s1 = useState(initial ? initial.teamId : currentTeamId); var teamId = s1[0]; var setTeamId = s1[1];
+    var s2 = useState(initial ? initial.rival : ""); var rival = s2[0]; var setRival = s2[1];
+    var s3 = useState(initial ? initial.date : todayISO()); var date = s3[0]; var setDate = s3[1];
+    var s4 = useState(initial ? initial.hour : "12:00"); var hour = s4[0]; var setHour = s4[1];
+    var s5 = useState(initial ? initial.venue : "local"); var venue = s5[0]; var setVenue = s5[1];
+    var s6 = useState(initial && initial.home != null ? initial.home : 0); var home = s6[0]; var setHome = s6[1];
+    var s7 = useState(initial && initial.away != null ? initial.away : 0); var away = s7[0]; var setAway = s7[1];
+    var sT = useState(initial ? (initial.matchType || "liga") : null); var matchType = sT[0]; var setMatchType = sT[1];
+    var s8 = useState(function() {
+      var m = {};
+      if (initial) {
+        (initial.players || []).forEach(function(p) { var c = p.cards || {}; m[p.id] = { min: Math.round((p.seconds || 0) / 60), goals: 0, assists: 0, yellow: c.yellow || 0, red: c.red || 0 }; });
+        (initial.events || []).forEach(function(ev) { if (ev.type === "goal" && m[ev.scorerId]) m[ev.scorerId].goals++; if (ev.assistId && m[ev.assistId]) m[ev.assistId].assists++; });
+      }
+      return m;
+    });
+    var stats = s8[0]; var setStats = s8[1];
+    var team = teams.find(function(t) { return t.id === teamId; }) || teams[0];
+    var base = team ? (team.players || []) : [];
+    var extras = initial ? (initial.players || []).filter(function(p) { return !base.some(function(b) { return b.id === p.id; }); }) : [];
+    var plist = base.concat(extras);
+    var cols = lockEv ? ["min", "yellow", "red"] : ["min", "goals", "assists", "yellow", "red"];
+    var colLabel = { min: "Min", goals: "⚽", assists: "🅰️", yellow: "🟨", red: "🟥" };
+    function nn(v) { return Math.max(0, Math.floor(Number(v) || 0)); }
+    function setStat(pid, k, v) { setStats(function(prev) { var n = Object.assign({}, prev); var o = Object.assign({}, n[pid] || {}); o[k] = v; n[pid] = o; return n; }); }
+    function save() {
+      var r = (rival || "").trim() || "Rival";
+      if (up) { onSave(Object.assign({}, initial, { rival: r, date: date, hour: hour, venue: venue, matchType: matchType || "liga" }), false); return; }
+      var fmt = FORMATS[(team && team.format) || "f11"];
+      var seed = initial || { id: uid(), manual: true, numParts: team.numParts || fmt.defaultParts, partMinutes: team.partMinutes || fmt.defaultPartMinutes, partScores: [], events: [], absences: {}, rivalCrest: null };
+      var rec = Object.assign({}, seed, { teamId: team.id, teamName: team.name, teamFormat: team.format || "f11", teamCrest: team.crest || null, rival: r, date: date, hour: hour, venue: venue, home: nn(home), away: nn(away), matchType: matchType || "liga" });
+      if (!initial) rec.matchSeconds = rec.numParts * rec.partMinutes * 60;
+      if (!lockEv) {
+        var evs = [], assisters = [];
+        plist.forEach(function(p) { var st = stats[p.id] || {}; var i; for (i = 0; i < nn(st.goals); i++) evs.push({ id: uid(), type: "goal", time: 0, part: 1, team: "own", scorerId: p.id, scorerName: p.name, assistId: null, assistName: null }); for (i = 0; i < nn(st.assists); i++) assisters.push(p); });
+        assisters.forEach(function(a) { var ev = evs.find(function(e) { return !e.assistId && e.scorerId !== a.id; }); if (ev) { ev.assistId = a.id; ev.assistName = a.name; } });
+        rec.events = evs;
+      }
+      rec.players = plist.filter(function(p) { var st = stats[p.id] || {}; return nn(st.min) > 0 || nn(st.goals) > 0 || nn(st.assists) > 0 || nn(st.yellow) > 0 || nn(st.red) > 0; }).map(function(p) { var st = stats[p.id] || {}; return { id: p.id, name: p.name, number: p.number, positions: p.positions, seconds: nn(st.min) * 60, cards: { yellow: nn(st.yellow), red: nn(st.red) } }; });
+      onSave(rec, !initial);
+    }
+    var canSave = (rival || "").trim() && team && matchType;
+    var numStyle = { width: 42, padding: "8px 2px", textAlign: "center", borderRadius: 8, border: "1.5px solid var(--line)", background: "var(--card-2)", color: "var(--ink)", fontSize: 16 };
+    return (<div className="modal-backdrop" onClick={onCancel}><div className="modal-sheet" style={{ maxHeight: "94%" }} onClick={function(e) { e.stopPropagation(); }}>
+      <div className="modal-header"><h2 style={{ margin: 0 }}>{up ? "Editar próximo partido" : (initial ? "Editar partido" : "Añadir partido jugado")}</h2><button className="modal-close" onClick={onCancel}>×</button></div>
+      <label className="field-label">Equipo</label>
+      <select className="input" value={teamId} disabled={!!initial} onChange={function(e) { setTeamId(e.target.value); setStats({}); }}>{teams.map(function(t) { return <option key={t.id} value={t.id}>{t.name}</option>; })}</select>
+      <label className="field-label" style={{ marginTop: 12 }}>Tipo de partido</label>
+      <div className="formation-grid">
+        <div className={"formation-chip" + (matchType === "liga" ? " active" : "")} onClick={function() { setMatchType("liga"); }}>🏆 Liga</div>
+        <div className={"formation-chip" + (matchType === "amistoso" ? " active" : "")} onClick={function() { setMatchType("amistoso"); }}>🤝 Amistoso</div>
+      </div>
+      {!matchType && <p className="warning-text">Selecciona Liga o Amistoso.</p>}
+      <label className="field-label" style={{ marginTop: 12 }}>Rival</label>
+      <input className="input" value={rival} onChange={function(e) { setRival(e.target.value); }} placeholder="Nombre rival" />
+      <label className="field-label" style={{ marginTop: 12 }}>Fecha y hora</label>
+      <div className="row-inputs"><input className="input" type="date" value={date} onChange={function(e) { setDate(e.target.value); }} /><input className="input" type="time" value={hour} onChange={function(e) { setHour(e.target.value); }} /></div>
+      <label className="field-label" style={{ marginTop: 12 }}>Sede</label>
+      <div className="formation-grid"><div className={"formation-chip" + (venue === "local" ? " active" : "")} onClick={function() { setVenue("local"); }}>Local</div><div className={"formation-chip" + (venue === "visitante" ? " active" : "")} onClick={function() { setVenue("visitante"); }}>Visitante</div></div>
+      {!up && <div>
+        <label className="field-label" style={{ marginTop: 12 }}>Resultado ({team ? team.name : "Nosotros"} – Rival)</label>
+        <div style={{ display: "flex", gap: 10, alignItems: "center" }}><input className="input" type="number" min="0" value={home} onChange={function(e) { setHome(e.target.value); }} style={{ textAlign: "center" }} /><span>–</span><input className="input" type="number" min="0" value={away} onChange={function(e) { setAway(e.target.value); }} style={{ textAlign: "center" }} /></div>
+        <label className="field-label" style={{ marginTop: 12 }}>Jugadores</label>
+        {lockEv && <p className="card-hint">Los goles de este partido se conservan tal como se registraron.</p>}
+        <div style={{ display: "flex", alignItems: "center", gap: 4, padding: "0 0 4px" }}><div style={{ flex: 1 }} />{cols.map(function(c) { return <div key={c} style={{ width: 42, textAlign: "center", fontSize: 11, color: "var(--ink-soft)" }}>{colLabel[c]}</div>; })}</div>
+        {plist.map(function(p) { var st = stats[p.id] || {}; return (<div key={p.id} style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 5 }}><div style={{ flex: 1, fontSize: 13.5, fontWeight: 600, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</div>{cols.map(function(c) { return <input key={c} type="number" inputMode="numeric" min="0" style={numStyle} value={st[c] === undefined ? "" : st[c]} placeholder="0" onChange={function(e) { setStat(p.id, c, e.target.value); }} />; })}</div>); })}
+        {plist.length === 0 && <div className="empty-note">Este equipo no tiene jugadores.</div>}
+      </div>}
+      <div className="actions-row" style={{ marginTop: 16 }}><button className="btn btn-ghost" onClick={onCancel}>Cancelar</button><button className="btn btn-primary" disabled={!canSave} onClick={save}>Guardar</button></div>
+    </div></div>);
+  }
+  function exportData(teams) {
+    var payload = { app: "mi-equipo", version: 1, exportedAt: new Date().toISOString(), teams: teams };
+    var blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    var url = URL.createObjectURL(blob);
+    var d = new Date();
+    var fname = "mi-equipo-" + d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0") + ".json";
+    var a = document.createElement("a");
+    a.href = url; a.download = fname;
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a);
+    setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
+  }
+  function copyDataToClipboard(teams) {
+    var payload = { app: "mi-equipo", version: 1, exportedAt: new Date().toISOString(), teams: teams };
+    var txt = JSON.stringify(payload);
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(txt).then(function() { alert("Datos copiados al portapapeles. Pégalos donde quieras."); }).catch(function() { alert("No se pudo copiar. Usa la opción de exportar a archivo."); });
+    } else {
+      var ta = document.createElement("textarea");
+      ta.value = txt;
+      ta.style.position = "fixed"; ta.style.left = "-9999px";
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand("copy"); alert("Datos copiados al portapapeles."); } catch (e) { alert("No se pudo copiar."); }
+      document.body.removeChild(ta);
+    }
+  }
+  function countTeamsPayload(payload) {
+    var ts = (payload && payload.teams) || [];
+    var m = 0, u = 0;
+    ts.forEach(function(t) { m += (t.matchHistory || []).length; u += (t.upcoming || []).length; });
+    return { teams: ts.length, matches: m, upcoming: u };
+  }
+  function mergeTeams(existing, incoming) {
+    var byId = {};
+    existing.forEach(function(t) { byId[t.id] = t; });
+    incoming.forEach(function(t) {
+      if (!byId[t.id]) { byId[t.id] = t; return; }
+      var a = byId[t.id], b = t;
+      var at = a.updatedAt || 0, bt = b.updatedAt || 0;
+      byId[t.id] = bt >= at ? b : a;
+    });
+    return Object.values(byId);
+  }
+  function TeamStatsBlock({ team, history, typeFilter }) {
+    var filtered = history.filter(function(r) { if (typeFilter !== "all" && (r.matchType || "liga") !== typeFilter) return false; return true; });
+    var byPlayer = {};
+    filtered.forEach(function(rec) {
+      (rec.players || []).forEach(function(p) {
+        if (!byPlayer[p.id]) byPlayer[p.id] = { id: p.id, name: p.name, number: p.number, seconds: 0, matches: 0, yellow: 0, red: 0, goals: 0, assists: 0 };
+        byPlayer[p.id].seconds += p.seconds;
+        byPlayer[p.id].matches += 1;
+        var pc = p.cards || { yellow: 0, red: 0 };
+        byPlayer[p.id].yellow += pc.yellow || 0;
+        byPlayer[p.id].red += pc.red || 0;
+      });
+      (rec.events || []).forEach(function(ev) {
+        if (ev.type === "goal" && ev.scorerId && byPlayer[ev.scorerId]) byPlayer[ev.scorerId].goals++;
+        if (ev.type === "goal" && ev.assistId && byPlayer[ev.assistId]) byPlayer[ev.assistId].assists++;
+      });
+    });
+    var agg = Object.values(byPlayer).sort(function(a, b) { return b.seconds - a.seconds; });
+    var homeSum = filtered.reduce(function(a, r) { return a + (r.home || 0); }, 0);
+    var awaySum = filtered.reduce(function(a, r) { return a + (r.away || 0); }, 0);
+    return (<div className="card" style={{ marginBottom: 10 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+        <TeamCrest crest={team.crest} name={team.name} size={36} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontFamily: "'Space Grotesk',sans-serif", fontWeight: 700, fontSize: 15 }}>{team.name || "Sin nombre"}</div>
+          {team.category && <div style={{ fontSize: 11.5, color: "var(--ink-soft)" }}>{team.category}</div>}
+        </div>
+      </div>
+      <div className="stat-summary">
+        <div className="stat-box"><div className="num">{filtered.length}</div><div className="lbl">Partidos</div></div>
+        <div className="stat-box"><div className="num">{homeSum}</div><div className="lbl">A favor</div></div>
+        <div className="stat-box"><div className="num">{awaySum}</div><div className="lbl">En contra</div></div>
+      </div>
+      {agg.length === 0 && <div className="empty-note" style={{ marginTop: 10 }}>Sin datos para este filtro.</div>}
+      {agg.length > 0 && <table className="summary-table"><thead><tr><th>Jugador</th><th>PJ</th><th>Total</th><th>⚽</th><th>🅰️</th><th>🟨</th><th>🟥</th></tr></thead><tbody>
+        {agg.map(function(p) { return <tr key={p.id}><td>{p.name}</td><td className="t-num">{p.matches}</td><td className="t-num">{formatTime(p.seconds)}</td><td className="t-num">{p.goals || ""}</td><td className="t-num">{p.assists || ""}</td><td className="t-num">{p.yellow || ""}</td><td className="t-num">{p.red || ""}</td></tr>; })}
+      </tbody></table>}
+    </div>);
+  } function App() {
+    var aL = useState(false); var loaded = aL[0]; var setLoaded = aL[1];
+    var aT = useState([]); var teams = aT[0]; var setTeams = aT[1];
+    var aC = useState(null); var currentTeamId = aC[0]; var setCurrentTeamId = aC[1];
+    var aTD = useState(false); var teamDetailOpen = aTD[0]; var setTeamDetailOpen = aTD[1];
+    var aNT = useState(false); var newTeamOpen = aNT[0]; var setNewTeamOpen = aNT[1];
+    var aAP = useState(false); var addPlayerOpen = aAP[0]; var setAddPlayerOpen = aAP[1];
+    var aEP = useState(null); var editPlayerId = aEP[0]; var setEditPlayerId = aEP[1];
+    var aMS = useState(false); var matchTeamSelectorOpen = aMS[0]; var setMatchTeamSelectorOpen = aMS[1];
+    var aDR = useState(null); var detailRecord = aDR[0]; var setDetailRecord = aDR[1];
+    var aEU = useState(null); var editingUpcomingId = aEU[0]; var setEditingUpcomingId = aEU[1];
+    var aAT = useState("jugadores"); var activeTab = aAT[0]; var setActiveTab = aAT[1];
+    var aST = useState("partido"); var statsTab = aST[0]; var setStatsTab = aST[1];
+    var aMTF = useState("all"); var matchTypeFilter = aMTF[0]; var setMatchTypeFilter = aMTF[1];
+    var aMP = useState("list"); var matchPhase = aMP[0]; var setMatchPhase = aMP[1];
+    var aSS = useState("info"); var setupStep = aSS[0]; var setSetupStep = aSS[1];
+    var aTN = useState("Mi equipo"); var teamName = aTN[0]; var setTeamName = aTN[1];
+    var aTCat = useState(""); var teamCategory = aTCat[0]; var setTeamCategory = aTCat[1];
+    var aTF = useState("f11"); var teamFormat = aTF[0]; var setTeamFormat = aTF[1];
+    var aNP = useState(2); var numParts = aNP[0]; var setNumParts = aNP[1];
+    var aPM = useState(35); var partMinutes = aPM[0]; var setPartMinutes = aPM[1];
+    var aPl = useState([]); var players = aPl[0]; var setPlayers = aPl[1];
+    var aFK = useState("4-4-2"); var formationKey = aFK[0]; var setFormationKey = aFK[1];
+    var aCS = useState([]); var customSlots = aCS[0]; var setCustomSlots = aCS[1];
+    var aDS = useState({}); var defaultSlots = aDS[0]; var setDefaultSlots = aDS[1];
+    var aRN = useState(""); var rivalName = aRN[0]; var setRivalName = aRN[1];
+    var aRC = useState(null); var rivalCrest = aRC[0]; var setRivalCrest = aRC[1];
+    var aV = useState("local"); var venue = aV[0]; var setVenue = aV[1];
+    var aMD = useState(todayISO()); var matchDate = aMD[0]; var setMatchDate = aMD[1];
+    var aMH = useState(nowHHMM()); var matchHour = aMH[0]; var setMatchHour = aMH[1];
+    var aMT = useState(null); var matchType = aMT[0]; var setMatchType = aMT[1];
+    var aAv = useState([]); var availablePlayerIds = aAv[0]; var setAvailablePlayerIds = aAv[1];
+    var aAb = useState({}); var absences = aAb[0]; var setAbsences = aAb[1];
+    var aLu = useState({}); var lineup = aLu[0]; var setLineup = aLu[1];
+    var aInitLu = useState({}); var initialLineup = aInitLu[0]; var setInitialLineup = aInitLu[1];
+    var aSubs = useState([]); var substitutions = aSubs[0]; var setSubstitutions = aSubs[1];
+    var subsSeqRef = useRef(0);
+    var initialLineupRef = useRef({});
+    var aSel = useState(null); var selected = aSel[0]; var setSelected = aSel[1];
+    var aPS = useState({}); var playerSeconds = aPS[0]; var setPlayerSeconds = aPS[1];
+    var aPSec = useState(0); var partSeconds = aPSec[0]; var setPartSeconds = aPSec[1];
+    var aRun = useState(false); var running = aRun[0]; var setRunning = aRun[1];
+    var aPart = useState(1); var part = aPart[0]; var setPart = aPart[1];
+    var aCards = useState({}); var cards = aCards[0]; var setCards = aCards[1];
+    var aCardsO = useState(false); var cardsOpen = aCardsO[0]; var setCardsOpen = aCardsO[1];
+    var aHS = useState(0); var homeScore = aHS[0]; var setHomeScore = aHS[1];
+    var aAS = useState(0); var awayScore = aAS[0]; var setAwayScore = aAS[1];
+    var aPartSc = useState([]); var partScores = aPartSc[0]; var setPartScores = aPartSc[1];
+    var aEv = useState([]); var events = aEv[0]; var setEvents = aEv[1];
+    var aGoal = useState(null); var goalModal = aGoal[0]; var setGoalModal = aGoal[1];
+    var aGoalsModal = useState(null); var goalsModal = aGoalsModal[0]; var setGoalsModal = aGoalsModal[1];
+    var aPSc = useState(1); var pitchScale = aPSc[0]; var setPitchScale = aPSc[1];
+    var aHist = useState([]); var matchHistory = aHist[0]; var setMatchHistory = aHist[1];
+    var aUpc = useState([]); var upcoming = aUpc[0]; var setUpcoming = aUpc[1];
+    var aLive = useState(null); var liveMatch = aLive[0]; var setLiveMatch = aLive[1];
+    var aAbsM = useState(null); var absenceModal = aAbsM[0]; var setAbsenceModal = aAbsM[1];
+    var aHistTeam = useState("all"); var histTeamFilter = aHistTeam[0]; var setHistTeamFilter = aHistTeam[1];
+    var aImpPayload = useState(null); var importPayload = aImpPayload[0]; var setImportPayload = aImpPayload[1];
+    var aImpNotice = useState(null); var importNotice = aImpNotice[0]; var setImportNotice = aImpNotice[1];
+    var partStartRef = useRef(0);
+    var aMM = useState(null); var manualModal = aMM[0]; var setManualModal = aMM[1];
+    var partBaseRef = useRef(0);
+    var playerBaseRef = useRef({});
+    var lineupRef = useRef({});
+    var playerSecondsRef = useRef({});
+    var runningRef = useRef(false);
+    var format = FORMATS[teamFormat] || FORMATS.f11;
+    var minPlayers = format.minPlayers;
+    useEffect(function() { lineupRef.current = lineup; }, [lineup]);
+    useEffect(function() { playerSecondsRef.current = playerSeconds; }, [playerSeconds]);
+    useEffect(function() { runningRef.current = running; }, [running]);
+    function getFormationSlots() { if (formationKey === "CUSTOM") return customSlots; if (defaultSlots[formationKey]) return defaultSlots[formationKey]; return format.formations[formationKey] ? format.formations[formationKey] : []; }
+    var formation = { label: formationKey === "CUSTOM" ? "Personalizada" : (formationKey in format.formations ? formationKey : Object.keys(format.formations)[0]), slots: getFormationSlots() };
+    var isCustom = formationKey === "CUSTOM";
+    function loadTeamData(id, allTeams) {
+      var list = allTeams || teams;
+      var t = list.find(function(x) { return x.id === id; });
+      if (!t) return;
+      var fmt = FORMATS[t.format || "f11"];
+      setTeamName(t.name || "Mi equipo");
+      setTeamCategory(t.category || "");
+      setTeamFormat(t.format || "f11");
+      setNumParts(t.numParts || fmt.defaultParts);
+      setPartMinutes(t.partMinutes || fmt.defaultPartMinutes);
+      setPlayers(t.players || []);
+      var firstFormation = Object.keys(fmt.formations)[0];
+      setFormationKey(t.formationKey || firstFormation);
+      setCustomSlots(t.customSlots || []);
+      setDefaultSlots(t.defaultSlots || {});
+      setMatchHistory(t.matchHistory || []);
+      setUpcoming(t.upcoming || []);
+      if (t.liveMatch) {
+        setLiveMatch(t.liveMatch);
+        setRivalName(t.liveMatch.rival || ""); setRivalCrest(t.liveMatch.rivalCrest || null);
+        setVenue(t.liveMatch.venue || "local"); setMatchDate(t.liveMatch.date || todayISO()); setMatchHour(t.liveMatch.hour || nowHHMM());
+        setMatchType(t.liveMatch.matchType || "liga");
+        setAvailablePlayerIds(t.liveMatch.availablePlayerIds || []); setAbsences(t.liveMatch.absences || {});
+        setLineup(t.liveMatch.lineup || {});
+        setInitialLineup(t.liveMatch.initialLineup || {});
+        initialLineupRef.current = t.liveMatch.initialLineup || {};
+        setSubstitutions(t.liveMatch.substitutions || []);
+        setPlayerSeconds(t.liveMatch.playerSeconds || {}); setPartSeconds(t.liveMatch.partSeconds || 0); setPart(t.liveMatch.part || 1); setRunning(false);
+        setCards(t.liveMatch.cards || {}); setHomeScore(t.liveMatch.homeScore || 0); setAwayScore(t.liveMatch.awayScore || 0);
+        setPartScores(t.liveMatch.partScores || []); setEvents(t.liveMatch.events || []);
+        partBaseRef.current = t.liveMatch.partSeconds || 0;
+        playerBaseRef.current = Object.assign({}, t.liveMatch.playerSeconds || {});
+      } else {
+        setLiveMatch(null); setRivalName(""); setRivalCrest(null); setVenue("local"); setMatchDate(todayISO()); setMatchHour(nowHHMM()); setMatchType(null);
+        setAvailablePlayerIds([]); setAbsences({}); setLineup({}); setInitialLineup({}); initialLineupRef.current = {}; setSubstitutions([]);
+        setPlayerSeconds({}); setPartSeconds(0); setPart(1); setRunning(false);
+        setCards({}); setHomeScore(0); setAwayScore(0); setPartScores([]); setEvents([]);
+        partBaseRef.current = 0;
+        playerBaseRef.current = {};
+      }
+      setMatchPhase("list");
+      setActiveTab("jugadores");
+    }
+    useEffect(function() {
+      (async function() {
+        try {
+          var versionRaw = await window.storage.get(DATA_VERSION_KEY);
+          var savedVersion = versionRaw && versionRaw.value ? Number(versionRaw.value) : 0;
+          var hasStored = await window.storage.get(TEAMS_KEY);
+          if (!(hasStored && hasStored.value) && savedVersion !== DATA_VERSION) {
+            var seeded = sanitizeTeams(JSON.parse(JSON.stringify(SEED_TEAMS)));
+            setTeams(seeded); setCurrentTeamId(seeded[0].id); loadTeamData(seeded[0].id, seeded);
+            await window.storage.set(TEAMS_KEY, JSON.stringify(seeded));
+            await window.storage.set(CURRENT_TEAM_KEY, seeded[0].id);
+            await window.storage.set(DATA_VERSION_KEY, String(DATA_VERSION));
+            setLoaded(true);
+            return;
+          }
+          var r = await window.storage.get(TEAMS_KEY);
+          if (r && r.value) {
+            var t = JSON.parse(r.value);
+            if (Array.isArray(t) && t.length > 0) {
+              var sanitized = sanitizeTeams(t);
+              setTeams(sanitized);
+              var cur = await window.storage.get(CURRENT_TEAM_KEY);
+              var id = cur && cur.value ? cur.value : sanitized[0].id;
+              if (!sanitized.find(function(x) { return x.id === id; })) id = sanitized[0].id;
+              setCurrentTeamId(id);
+              loadTeamData(id, sanitized);
+              await window.storage.set(TEAMS_KEY, JSON.stringify(sanitized));
+              await window.storage.set(DATA_VERSION_KEY, String(DATA_VERSION));
+            } else {
+              var seeded2 = sanitizeTeams(JSON.parse(JSON.stringify(SEED_TEAMS)));
+              setTeams(seeded2); setCurrentTeamId(seeded2[0].id); loadTeamData(seeded2[0].id, seeded2);
+              await window.storage.set(TEAMS_KEY, JSON.stringify(seeded2));
+              await window.storage.set(CURRENT_TEAM_KEY, seeded2[0].id);
+              await window.storage.set(DATA_VERSION_KEY, String(DATA_VERSION));
+            }
+          } else {
+            var seeded3 = sanitizeTeams(JSON.parse(JSON.stringify(SEED_TEAMS)));
+            setTeams(seeded3); setCurrentTeamId(seeded3[0].id); loadTeamData(seeded3[0].id, seeded3);
+            await window.storage.set(TEAMS_KEY, JSON.stringify(seeded3));
+            await window.storage.set(CURRENT_TEAM_KEY, seeded3[0].id);
+            await window.storage.set(DATA_VERSION_KEY, String(DATA_VERSION));
+          }
+        } catch (e) {}
+        setLoaded(true);
+      })();
+    }, []);
+    useEffect(function() {
+      if (!loaded || !currentTeamId) return;
+      var updated = teams.map(function(t) {
+        if (t.id === currentTeamId) {
+          return Object.assign({}, t, { name: teamName, category: teamCategory, format: teamFormat, numParts: numParts, partMinutes: partMinutes, players: players, formationKey: formationKey, customSlots: customSlots, defaultSlots: defaultSlots, matchHistory: matchHistory, upcoming: upcoming, liveMatch: matchPhase === "live" ? { rival: rivalName, rivalCrest: rivalCrest || null, venue: venue, date: matchDate, hour: matchHour, matchType: matchType || "liga", availablePlayerIds: availablePlayerIds, absences: absences, lineup: lineup, initialLineup: initialLineupRef.current, substitutions: substitutions, playerSeconds: playerSeconds, partSeconds: partSeconds, part: part, cards: cards, homeScore: homeScore, awayScore: awayScore, partScores: partScores, events: events, updatedAt: Date.now() } : (liveMatch || null), updatedAt: Date.now() });
+        }
+        return t;
+      });
+      setTeams(updated);
+      (async function() { try { await window.storage.set(TEAMS_KEY, JSON.stringify(updated)); await window.storage.set(CURRENT_TEAM_KEY, currentTeamId); } catch (e) {} })();
+    }, [loaded, currentTeamId, teamName, teamCategory, teamFormat, numParts, partMinutes, players, formationKey, customSlots, defaultSlots, matchHistory, upcoming, matchPhase, rivalName, rivalCrest, venue, matchDate, matchHour, matchType, availablePlayerIds, absences, lineup, initialLineup, substitutions, playerSeconds, partSeconds, part, cards, homeScore, awayScore, partScores, events]);
+    useEffect(function() { var w = null; (async function() { if (running && "wakeLock" in navigator) { try { w = await navigator.wakeLock.request("screen"); } catch (e) {} } })(); return function() { if (w) w.release().catch(function() {}); }; }, [running]);
+    function applyElapsed() {
+      if (!partStartRef.current) return null;
+      var now = Date.now();
+      var elapsed = Math.floor((now - partStartRef.current) / 1000);
+      if (elapsed <= 0) return null;
+      var newPartSeconds = partBaseRef.current + elapsed;
+      var currentLineup = lineupRef.current;
+      var currentPlayerSeconds = playerSecondsRef.current;
+      var nextPlayerSeconds = Object.assign({}, currentPlayerSeconds);
+      Object.values(currentLineup).forEach(function(pid) {
+        if (pid) {
+          var base = playerBaseRef.current[pid];
+          if (base === undefined) base = currentPlayerSeconds[pid] || 0;
+          nextPlayerSeconds[pid] = base + elapsed;
+        }
+      });
+      setPartSeconds(newPartSeconds);
+      setPlayerSeconds(nextPlayerSeconds);
+      playerSecondsRef.current = nextPlayerSeconds;
+      var newBases = {};
+      Object.keys(nextPlayerSeconds).forEach(function(pid) { newBases[pid] = nextPlayerSeconds[pid]; });
+      playerBaseRef.current = newBases;
+      partStartRef.current = now;
+      partBaseRef.current = newPartSeconds;
+      return nextPlayerSeconds;
+    }
+    useEffect(function() {
+      if (!running) return;
+      var iv = setInterval(function() { applyElapsed(); }, 1000);
+      return function() { clearInterval(iv); };
+    }, [running]);
+    useEffect(function() {
+      if (running) { partStartRef.current = Date.now(); playerBaseRef.current = Object.assign({}, playerSecondsRef.current); }
+      else { applyElapsed(); partStartRef.current = 0; }
+    }, [running]);
+    useEffect(function() { if (!running) return; applyElapsed(); }, [lineup]);
+    useEffect(function() {
+      function handleVis() { if (document.visibilityState === "visible" && runningRef.current) applyElapsed(); }
+      document.addEventListener("visibilitychange", handleVis);
+      window.addEventListener("focus", handleVis);
+      return function() { document.removeEventListener("visibilitychange", handleVis); window.removeEventListener("focus", handleVis); };
+    }, []);
+    function totalPlayerSeconds(pid) { return playerSeconds[pid] || 0; }
+    function cardsOf(pid) { return cards[pid] || { yellow: 0, red: 0 }; }
+    var enrichedPlayers = players.map(function(p) { return Object.assign({}, p, { seconds: totalPlayerSeconds(p.id), cards: cardsOf(p.id) }); });
+    var assignedIds = new Set(Object.values(lineup).filter(Boolean));
+    var benchPlayers = enrichedPlayers.filter(function(p) { return availablePlayerIds.includes(p.id) && !assignedIds.has(p.id); });
+    var totalPlayed = numParts * partMinutes * 60;
+    var fullTargetShare = availablePlayerIds.length > 0 ? (totalPlayed * formation.slots.length) / availablePlayerIds.length : 0;
+    function statusFor(pid) { if (matchPhase !== "live") return null; var played = totalPlayerSeconds(pid); var on = assignedIds.has(pid); if (!on && played < fullTargetShare - 60) return "amber"; return null; }
+    function getAbsoluteMinute() { var prev = 0; for (var i = 0; i < partScores.length; i++) prev += (partScores[i].seconds || 0); return Math.floor((prev + partSeconds) / 60); }
+    function logTimelineEvent(ev) { var min = getAbsoluteMinute(); subsSeqRef.current = (subsSeqRef.current || 0) + 1; var w = Object.assign({}, ev, { id: ev.id || uid(), min: min, seq: subsSeqRef.current }); setSubstitutions(function(prev) { return prev.concat([w]); }); }
+    function replaceInLineup(slotId, newPlayerId) { setLineup(function(prev) { var n = Object.assign({}, prev); Object.keys(n).forEach(function(k) { if (n[k] === newPlayerId) delete n[k]; }); n[slotId] = newPlayerId; return n; }); }
+    function swapSlots(a, b) { setLineup(function(prev) { var n = Object.assign({}, prev); var x = n[a] || null, y = n[b] || null; if (y) n[a] = y; else delete n[a]; if (x) n[b] = x; else delete n[b]; return n; }); setSelected(null); }
+    function handleSlotTap(slotId) {
+      if (selected && selected.type === "player") { doAssignWithSub(slotId, selected.id); return; }
+      if (selected && selected.type === "slot") {
+        if (selected.id === slotId) { setSelected(null); return; }
+        if (matchPhase === "live") {
+          var aId = lineup[selected.id], bId = lineup[slotId];
+          if (aId || bId) logTimelineEvent({ type: "swap", fromSlot: selected.id, toSlot: slotId, fromId: aId || null, toId: bId || null });
+        }
+        swapSlots(selected.id, slotId);
+        return;
+      }
+      setSelected({ type: "slot", id: slotId });
+    }
+    function handlePlayerTap(playerId) { if (selected && selected.type === "slot") { doAssignWithSub(selected.id, playerId); return; } if (selected && selected.type === "player" && selected.id === playerId) { setSelected(null); return; } setSelected({ type: "player", id: playerId }); }
+    function doAssignWithSub(slotId, incomingPlayerId) {
+      var outgoingId = lineup[slotId];
+      var incomingOnField = Object.values(lineup).indexOf(incomingPlayerId) !== -1;
+      if (outgoingId && !incomingOnField && matchPhase === "live") logTimelineEvent({ type: "sub", outId: outgoingId, inId: incomingPlayerId });
+      replaceInLineup(slotId, incomingPlayerId);
+      setSelected(null);
+    }
+    function handleSlotDrag(slotId, x, y) {
+      if (formationKey === "CUSTOM") setCustomSlots(function(prev) { return prev.map(function(s) { return s.id === slotId ? Object.assign({}, s, { x: x, y: y }) : s; }); });
+      else setDefaultSlots(function(prev) { var base = prev[formationKey] || format.formations[formationKey] || []; var arr = Object.assign({}, prev); arr[formationKey] = base.map(function(s) { return s.id === slotId ? Object.assign({}, s, { x: x, y: y }) : s; }); return arr; });
+    }
+    function addPlayer(data) { setPlayers(function(prev) { return prev.concat([{ id: uid(), name: data.name, number: data.number, positions: data.positions }]); }); setAddPlayerOpen(false); }
+    function updatePlayer(id, data) { setPlayers(function(prev) { return prev.map(function(p) { return p.id === id ? Object.assign({}, p, { name: data.name, number: data.number, positions: data.positions }) : p; }); }); setEditPlayerId(null); }
+    function removePlayer(id) { setPlayers(function(prev) { return prev.filter(function(p) { return p.id !== id; }); }); setLineup(function(prev) { var n = Object.assign({}, prev); Object.keys(n).forEach(function(k) { if (n[k] === id) delete n[k]; }); return n; }); setAvailablePlayerIds(function(prev) { return prev.filter(function(x) { return x !== id; }); }); }
+    function toggleAvailable(id) { if (availablePlayerIds.includes(id)) { setAvailablePlayerIds(availablePlayerIds.filter(function(x) { return x !== id; })); setLineup(function(prev) { var n = Object.assign({}, prev); Object.keys(n).forEach(function(k) { if (n[k] === id) delete n[k]; }); return n; }); } else { setAvailablePlayerIds(availablePlayerIds.concat([id])); setAbsences(function(prev) { var n = Object.assign({}, prev); delete n[id]; return n; }); } }
+    function addCard(pid, type) { setCards(function(prev) { var c = prev[pid] || { yellow: 0, red: 0 }; var nc = Object.assign({}, c); nc[type] = nc[type] + 1; var n = Object.assign({}, prev); n[pid] = nc; return n; }); }
+    function removeCard(pid, type) { setCards(function(prev) { var c = prev[pid] || { yellow: 0, red: 0 }; var nc = Object.assign({}, c); nc[type] = Math.max(0, nc[type] - 1); var n = Object.assign({}, prev); n[pid] = nc; return n; }); }
+    function addCustomSlot(x, y) { var id = "C" + uid(); setCustomSlots(function(prev) { return prev.concat([{ id: id, pos: "—", x: Math.round(x), y: Math.round(y) }]); }); }
+    function saveManual(kind, rec, isNew) {
+      var field = kind === "upcoming" ? "upcoming" : "matchHistory";
+      function apply(arr) { arr = arr || []; return isNew ? [rec].concat(arr) : arr.map(function(r) { return r.id === rec.id ? rec : r; }); }
+      if (rec.teamId === currentTeamId) {
+        (kind === "upcoming" ? setUpcoming : setMatchHistory)(function(prev) { return apply(prev); });
+      } else {
+        setTeams(function(prev) {
+          var updated = prev.map(function(t) { if (t.id !== rec.teamId) return t; var n = Object.assign({}, t, { updatedAt: Date.now() }); n[field] = apply(t[field]); return n; });
+          (async function() { try { await window.storage.set(TEAMS_KEY, JSON.stringify(updated)); } catch (e) {} })();
+          return updated;
+        });
+      }
+      setManualModal(null); setDetailRecord(null);
+    }
+    function goToNewMatchSetup() { setMatchTeamSelectorOpen(true); }
+    function onSelectMatchTeam(teamId) {
+      setMatchTeamSelectorOpen(false);
+      if (currentTeamId && teamId !== currentTeamId) {
+        var updated = teams.map(function(t) { return t.id === currentTeamId ? Object.assign({}, t, { name: teamName, category: teamCategory, format: teamFormat, numParts: numParts, partMinutes: partMinutes, players: players, formationKey: formationKey, customSlots: customSlots, defaultSlots: defaultSlots, matchHistory: matchHistory, upcoming: upcoming, liveMatch: liveMatch || null }) : t; });
+        setTeams(updated); setCurrentTeamId(teamId); loadTeamData(teamId, updated);
+      }
+      setTimeout(function() {
+        var t = teams.find(function(x) { return x.id === teamId; });
+        if (t) setAvailablePlayerIds((t.players || []).map(function(p) { return p.id; }));
+        setRivalName(""); setRivalCrest(null); setVenue("local"); setMatchDate(todayISO()); setMatchHour(nowHHMM()); setMatchType(null);
+        setAbsences({}); setLineup({}); setInitialLineup({}); initialLineupRef.current = {}; setSubstitutions([]); setSelected(null);
+        setPlayerSeconds({}); setPartSeconds(0); setPart(1); setRunning(false); setCards({});
+        setHomeScore(0); setAwayScore(0); setPartScores([]); setCardsOpen(false); setSetupStep("info");
+        setEvents([]); setGoalModal(null); setEditingUpcomingId(null);
+        partBaseRef.current = 0; playerBaseRef.current = {}; partStartRef.current = 0;
+        subsSeqRef.current = 0;
+        setMatchPhase("setup");
+      }, 60);
+    }
+    function startMatch() {
+      var snapshot = Object.assign({}, lineup);
+      initialLineupRef.current = snapshot;
+      setInitialLineup(snapshot);
+      setSubstitutions([]);
+      subsSeqRef.current = 0;
+      partBaseRef.current = 0; playerBaseRef.current = {}; partStartRef.current = 0;
+      setRunning(true); setMatchPhase("live");
+    }
+    function changePart() {
+      var nextPart = part + 1;
+      setPartScores(function(prev) { return prev.concat([{ part: part, home: homeScore, away: awayScore, seconds: partSeconds }]); });
+      setPart(nextPart);
+      setPartSeconds(0);
+      setRunning(false);
+      partBaseRef.current = 0; playerBaseRef.current = {}; partStartRef.current = 0;
+    }
+    function lineupToList(lu, slots) { if (!slots || slots.length === 0) return []; return slots.map(function(s) { return { pos: s.pos, playerId: lu[s.id] || null }; }).filter(function(it) { return it.playerId; }); }
+    function finishMatch() {
+      setRunning(false);
+      applyElapsed();
+      if (editingUpcomingId) { setUpcoming(function(prev) { return prev.filter(function(u) { return u.id !== editingUpcomingId; }); }); setEditingUpcomingId(null); }
+      var finalParts = partScores.concat([{ part: part, home: homeScore, away: awayScore, seconds: partSeconds }]);
+      var totalSeconds = finalParts.reduce(function(a, p) { return a + p.seconds; }, 0);
+      var snapshot = (initialLineupRef.current && Object.keys(initialLineupRef.current).length > 0) ? initialLineupRef.current : initialLineup;
+      var currentTeamObj = teams.find(function(t) { return t.id === currentTeamId; });
+      var record = {
+        id: uid(), teamId: currentTeamId, teamName: teamName, teamCategory: teamCategory, teamFormat: teamFormat,
+        teamCrest: (currentTeamObj && currentTeamObj.crest) || null,
+        rivalCrest: rivalCrest || null,
+        date: matchDate, hour: matchHour, rival: rivalName.trim() || "Rival", venue: venue,
+        matchType: matchType || "liga",
+        home: homeScore, away: awayScore, matchSeconds: totalSeconds,
+        partScores: finalParts, events: events, absences: absences,
+        numParts: numParts, partMinutes: partMinutes, formationKey: formationKey,
+        initialLineup: Object.assign({}, snapshot), lineup: Object.assign({}, snapshot),
+        lineupList: lineupToList(snapshot, getFormationSlots()),
+        substitutions: substitutions.slice(),
+        players: enrichedPlayers.filter(function(p) { return availablePlayerIds.includes(p.id); }).map(function(p) { return { id: p.id, name: p.name, number: p.number, positions: p.positions, seconds: p.seconds, cards: p.cards }; })
+      };
+      setMatchHistory(function(prev) { return [record].concat(prev); });
+      setLiveMatch(null);
+      setMatchPhase("summary");
+    }
+    function handleMainButton() { var isLast = part >= numParts; if (isLast) { finishMatch(); return; } if (running) changePart(); else setRunning(true); }
+    function scheduleMatch() {
+      if (editingUpcomingId) {
+        setUpcoming(function(prev) { return prev.map(function(u) { return u.id === editingUpcomingId ? Object.assign({}, u, { date: matchDate, hour: matchHour, rival: rivalName.trim() || "Rival", rivalCrest: rivalCrest || null, venue: venue, matchType: matchType || "liga", formationKey: formationKey, customSlots: isCustom ? customSlots : null, defaultSlots: !isCustom ? defaultSlots : null, availablePlayerIds: availablePlayerIds.slice(), absences: Object.assign({}, absences), lineup: Object.assign({}, lineup) }) : u; }); });
+        setEditingUpcomingId(null); setMatchPhase("list");
+      } else {
+        var record = { id: uid(), teamId: currentTeamId, teamName: teamName, teamCategory: teamCategory, teamFormat: teamFormat, date: matchDate, hour: matchHour, rival: rivalName.trim() || "Rival", rivalCrest: rivalCrest || null, venue: venue, matchType: matchType || "liga", formationKey: formationKey, customSlots: isCustom ? customSlots : null, defaultSlots: !isCustom ? defaultSlots : null, availablePlayerIds: availablePlayerIds.slice(), absences: Object.assign({}, absences), lineup: Object.assign({}, lineup) };
+        setUpcoming(function(prev) { return [record].concat(prev); });
+        setMatchPhase("list");
+      }
+    }
+    function editUpcoming(rec) { if (rec.teamId && rec.teamId !== currentTeamId) { switchTeam(rec.teamId); setTimeout(function() { loadUpcomingToForm(rec); }, 60); } else loadUpcomingToForm(rec); }
+    function loadUpcomingToForm(rec) {
+      setEditingUpcomingId(rec.id);
+      setRivalName(rec.rival); setRivalCrest(rec.rivalCrest || null); setVenue(rec.venue); setMatchDate(rec.date); setMatchHour(rec.hour);
+      setMatchType(rec.matchType || "liga");
+      if (rec.defaultSlots) setDefaultSlots(function(prev) { return Object.assign({}, prev, rec.defaultSlots); });
+      if (rec.formationKey === "CUSTOM" && Array.isArray(rec.customSlots)) { setCustomSlots(rec.customSlots); setFormationKey("CUSTOM"); }
+      else setFormationKey(rec.formationKey || Object.keys(FORMATS[rec.teamFormat || "f11"].formations)[0]);
+      setAvailablePlayerIds(rec.availablePlayerIds || []); setAbsences(rec.absences || {}); setLineup(rec.lineup || {});
+      setSetupStep("info"); setMatchPhase("setup");
+    }
+    function openUpcoming(rec) { if (rec.teamId && rec.teamId !== currentTeamId) { switchTeam(rec.teamId); setTimeout(function() { startUpcoming(rec); }, 60); } else startUpcoming(rec); }
+    function startUpcoming(rec) {
+      setEditingUpcomingId(rec.id);
+      setRivalName(rec.rival); setRivalCrest(rec.rivalCrest || null); setVenue(rec.venue); setMatchDate(rec.date); setMatchHour(rec.hour);
+      setMatchType(rec.matchType || "liga");
+      if (rec.defaultSlots) setDefaultSlots(function(prev) { return Object.assign({}, prev, rec.defaultSlots); });
+      if (rec.formationKey === "CUSTOM" && Array.isArray(rec.customSlots)) { setCustomSlots(rec.customSlots); setFormationKey("CUSTOM"); }
+      else setFormationKey(rec.formationKey || Object.keys(FORMATS[rec.teamFormat || "f11"].formations)[0]);
+      setAvailablePlayerIds(rec.availablePlayerIds || []); setAbsences(rec.absences || {}); setLineup(rec.lineup || {});
+      var snapshot = Object.assign({}, rec.lineup || {});
+      initialLineupRef.current = snapshot;
+      setInitialLineup(snapshot);
+      setSubstitutions(rec.substitutions || []);
+      subsSeqRef.current = 0;
+      setPlayerSeconds({}); setPartSeconds(0); setPart(1); setRunning(false); setCards({});
+      setHomeScore(0); setAwayScore(0); setPartScores([]); setCardsOpen(false); setEvents([]); setGoalModal(null); setSelected(null);
+      partBaseRef.current = 0; playerBaseRef.current = {}; partStartRef.current = 0;
+      setLiveMatch({ rival: rec.rival, rivalCrest: rec.rivalCrest || null, venue: rec.venue, date: rec.date, hour: rec.hour, matchType: rec.matchType || "liga", availablePlayerIds: rec.availablePlayerIds, absences: rec.absences, lineup: rec.lineup, initialLineup: snapshot });
+      setMatchPhase("live");
+    }
+    function removeUpcoming(rec) { if (rec.teamId && rec.teamId !== currentTeamId) { setTeams(function(prev) { return prev.map(function(t) { return t.id === rec.teamId ? Object.assign({}, t, { upcoming: (t.upcoming || []).filter(function(u) { return u.id !== rec.id; }) }) : t; }); }); } else setUpcoming(function(prev) { return prev.filter(function(u) { return u.id !== rec.id; }); }); }
+    function backToSetup() { setRunning(false); setMatchPhase("setup"); setSetupStep("lineup"); }
+    function goToList() { setRunning(false); setMatchPhase("list"); }
+    function removeHistoryRecord(rec) { if (rec.teamId && rec.teamId !== currentTeamId) { setTeams(function(prev) { return prev.map(function(t) { return t.id === rec.teamId ? Object.assign({}, t, { matchHistory: (t.matchHistory || []).filter(function(r) { return r.id !== rec.id; }) }) : t; }); }); } else setMatchHistory(function(prev) { return prev.filter(function(r) { return r.id !== rec.id; }); }); }
+    function deleteGoalFromRecord(rec, ev) {
+      if (!confirm("¿Borrar el gol de " + (ev.scorerName || "?") + " en el minuto " + Math.floor((ev.time || 0) / 60) + "? Se descontará del marcador y de las estadísticas.")) return;
+      var isOurGoal = ev.team === "own";
+      setTeams(function(prev) {
+        return prev.map(function(t) {
+          if (t.id !== rec.teamId) return t;
+          var newHistory = (t.matchHistory || []).map(function(r) {
+            if (r.id !== rec.id) return r;
+            var n = Object.assign({}, r);
+            n.events = (r.events || []).filter(function(e) { return e.id !== ev.id; });
+            if (isOurGoal) {
+              n.home = Math.max(0, (n.home || 0) - 1);
+              n.partScores = (n.partScores || []).map(function(ps) { if (ps.part === ev.part) { var c = Object.assign({}, ps); c.home = Math.max(0, (c.home || 0) - 1); return c; } return ps; });
+            } else {
+              n.away = Math.max(0, (n.away || 0) - 1);
+              n.partScores = (n.partScores || []).map(function(ps) { if (ps.part === ev.part) { var c = Object.assign({}, ps); c.away = Math.max(0, (c.away || 0) - 1); return c; } return ps; });
+            }
+            return n;
+          });
+          return Object.assign({}, t, { matchHistory: newHistory, updatedAt: Date.now() });
+        });
+      });
+      setTimeout(function() {
+        setTeams(function(prev) {
+          var found = null;
+          prev.forEach(function(t) { if (t.id === rec.teamId) (t.matchHistory || []).forEach(function(r) { if (r.id === rec.id) found = r; }); });
+          if (found) setDetailRecord(Object.assign({}, found, { teamId: rec.teamId, teamName: found.teamName || rec.teamName, teamFormat: found.teamFormat || rec.teamFormat, teamCategory: found.teamCategory || rec.teamCategory }));
+          return prev;
+        });
+      }, 50);
+    }
+    function switchTeam(id) {
+      var updated = teams.map(function(t) { return t.id === currentTeamId ? Object.assign({}, t, { name: teamName, category: teamCategory, format: teamFormat, numParts: numParts, partMinutes: partMinutes, players: players, formationKey: formationKey, customSlots: customSlots, defaultSlots: defaultSlots, matchHistory: matchHistory, upcoming: upcoming, liveMatch: liveMatch || null, updatedAt: Date.now() }) : t; });
+      setTeams(updated); setCurrentTeamId(id); loadTeamData(id, updated);
+    }
+    function createTeam(name, fmt, category) {
+      var f = FORMATS[fmt];
+      var defaultFormation = Object.keys(f.formations)[0];
+      var currentUpdated = currentTeamId ? teams.map(function(t) { return t.id === currentTeamId ? Object.assign({}, t, { name: teamName, category: teamCategory, format: teamFormat, numParts: numParts, partMinutes: partMinutes, players: players, formationKey: formationKey, customSlots: customSlots, defaultSlots: defaultSlots, matchHistory: matchHistory, upcoming: upcoming, liveMatch: liveMatch || null, updatedAt: Date.now() }) : t; }) : teams;
+      var newTeam = { id: uid(), name: name, crest: null, category: category || "", format: fmt, numParts: f.defaultParts, partMinutes: f.defaultPartMinutes, players: [], formationKey: defaultFormation, customSlots: [], defaultSlots: {}, matchHistory: [], upcoming: [], liveMatch: null, updatedAt: Date.now() };
+      var updated = currentUpdated.concat([newTeam]);
+      setTeams(updated); setCurrentTeamId(newTeam.id); loadTeamData(newTeam.id, updated);
+    }
+    function deleteTeam(id) {
+      var updated = teams.filter(function(t) { return t.id !== id; });
+      setTeams(updated);
+      if (currentTeamId === id) {
+        if (updated.length > 0) { setCurrentTeamId(updated[0].id); loadTeamData(updated[0].id, updated); }
+        else { setCurrentTeamId(null); setTeamDetailOpen(false); }
+      }
+    }
+    function updateTeamCrest(id, dataUrl) {
+      setTeams(function(prev) {
+        var updated = prev.map(function(t) { return t.id === id ? Object.assign({}, t, { crest: dataUrl || null, updatedAt: Date.now() }) : t; });
+        (async function() { try { await window.storage.set(TEAMS_KEY, JSON.stringify(updated)); } catch (e) {} })();
+        return updated;
+      });
+    }
+    function handleExport() { exportData(teams); }
+    function handleCopyToClipboard() { copyDataToClipboard(teams); }
+    function handleImportClick() {
+      var input = document.createElement("input");
+      input.type = "file";
+      input.accept = "application/json,.json";
+      input.onchange = function(e) {
+        var f = e.target.files && e.target.files[0];
+        if (!f) return;
+        var reader = new FileReader();
+        reader.onload = function(evt) {
+          try {
+            var payload = JSON.parse(evt.target.result);
+            if (!payload || !Array.isArray(payload.teams)) { alert("Archivo no válido: no contiene equipos."); return; }
+            setImportPayload(payload);
+          } catch (err) { alert("Error al leer el archivo: " + err.message); }
+        };
+        reader.readAsText(f);
+      };
+      input.click();
+    }
+    function handlePasteImport() {
+      var txt = prompt("Pega aquí el texto exportado:");
+      if (!txt) return;
+      try {
+        var payload = JSON.parse(txt.trim());
+        if (!payload || !Array.isArray(payload.teams)) { alert("El texto no contiene equipos válidos."); return; }
+        setImportPayload(payload);
+      } catch (err) { alert("Error al leer el texto: " + err.message); }
+    }
+    function doImportReplace() {
+      var payload = importPayload;
+      if (!payload) return;
+      var sanitized = sanitizeTeams(payload.teams);
+      setTeams(sanitized);
+      if (sanitized.length > 0) { setCurrentTeamId(sanitized[0].id); loadTeamData(sanitized[0].id, sanitized); }
+      (async function() { try { await window.storage.set(TEAMS_KEY, JSON.stringify(sanitized)); if (sanitized[0]) await window.storage.set(CURRENT_TEAM_KEY, sanitized[0].id); } catch (e) {} })();
+      var c = countTeamsPayload(payload);
+      setImportNotice({ type: "reemplazar", teams: c.teams, matches: c.matches, upcoming: c.upcoming });
+      setImportPayload(null);
+    }
+    function doImportMerge() {
+      var payload = importPayload;
+      if (!payload) return;
+      var merged = mergeTeams(teams, sanitizeTeams(payload.teams));
+      setTeams(merged);
+      (async function() { try { await window.storage.set(TEAMS_KEY, JSON.stringify(merged)); } catch (e) {} })();
+      if (!currentTeamId && merged.length > 0) { setCurrentTeamId(merged[0].id); loadTeamData(merged[0].id, merged); }
+      var c = countTeamsPayload(payload);
+      setImportNotice({ type: "fusionar", teams: c.teams, matches: c.matches, upcoming: c.upcoming });
+      setImportPayload(null);
+    }
+    var filledSlots = Object.keys(lineup).length;
+    var canGoLineup = players.length >= minPlayers;
+    var canContinueToLineup = rivalName.trim().length > 0 && availablePlayerIds.length >= minPlayers && !!matchType;
+    var canStartMatch = formation.slots.length > 0 && filledSlots === formation.slots.length;
+    var totalCards = Object.values(cards).reduce(function(acc, c) { return acc + c.yellow + c.red; }, 0);
+    var allUpcoming = [];
+    teams.forEach(function(t) { (t.upcoming || []).forEach(function(u) { allUpcoming.push(Object.assign({}, u, { teamId: t.id, teamName: u.teamName || t.name, teamCategory: u.teamCategory || t.category || "", teamFormat: u.teamFormat || t.format || "f11", teamCrest: t.crest || null, matchType: u.matchType || "liga" })); }); });
+    var allUpcomingF11 = allUpcoming.filter(function(u) { return (u.teamFormat || "f11") === "f11"; });
+    var allUpcomingF7 = allUpcoming.filter(function(u) { return (u.teamFormat || "f11") === "f7"; });
+    var allHistory = [];
+    teams.forEach(function(t) { (t.matchHistory || []).forEach(function(h) { allHistory.push(Object.assign({}, h, { teamId: t.id, teamName: h.teamName || t.name, teamCategory: h.teamCategory || t.category || "", teamFormat: h.teamFormat || t.format || "f11", teamCrest: h.teamCrest || t.crest || null, matchType: h.matchType || "liga" })); }); });
+    var allHistoryF11 = allHistory.filter(function(h) { return (h.teamFormat || "f11") === "f11"; });
+    var allHistoryF7 = allHistory.filter(function(h) { return (h.teamFormat || "f11") === "f7"; });
+    var liveTeam = teams.find(function(t) { return t.liveMatch; });
+    var liveMatchAny = liveTeam ? Object.assign({}, liveTeam.liveMatch, { teamId: liveTeam.id, teamName: liveTeam.liveMatch.teamName || liveTeam.name, teamCrest: liveTeam.crest || null }) : null;
+    var statsHistoryAll = [];
+    teams.forEach(function(t) { (t.matchHistory || []).forEach(function(h) { statsHistoryAll.push(Object.assign({}, h, { teamId: t.id, teamName: h.teamName || t.name, teamCategory: h.teamCategory || t.category || "", teamFormat: h.teamFormat || t.format || "f11", teamCrest: h.teamCrest || t.crest || null, matchType: h.matchType || "liga" })); }); });
+    statsHistoryAll.sort(function(a, b) { return (b.date + b.hour).localeCompare(a.date + a.hour); });
+    var statsHistoryFiltered = statsHistoryAll.filter(function(r) { if (histTeamFilter !== "all" && r.teamId !== histTeamFilter) return false; if (matchTypeFilter !== "all" && (r.matchType || "liga") !== matchTypeFilter) return false; return true; });
+    var teamsF11 = teams.filter(function(t) { return (t.format || "f11") === "f11"; });
+    var teamsF7 = teams.filter(function(t) { return (t.format || "f11") === "f7"; });
+    var teamsF5 = teams.filter(function(t) { return (t.format || "f11") === "f5"; });
+    var tabs = [ { id: "jugadores", label: "Jugadores", icon: IconPlayers }, { id: "partidos", label: "Partidos", icon: IconMatch }, { id: "estadisticas", label: "Estadísticas", icon: IconStats } ];
+    var isLiveFull = activeTab === "partidos" && matchPhase === "live";
+    function onAddHomeGoal() { setGoalModal({ team: "own" }); }
+    function onAddAwayGoal() { setGoalModal({ team: "rival" }); }
+    function confirmGoal(scorerId, assistId, isRival) {
+      if (isRival) { setAwayScore(function(s) { return s + 1; }); setGoalModal(null); return; }
+      setHomeScore(function(s) { return s + 1; });
+      var scorer = players.find(function(p) { return p.id === scorerId; });
+      var assist = assistId ? players.find(function(p) { return p.id === assistId; }) : null;
+      setEvents(function(prev) { return prev.concat([{ id: uid(), type: "goal", time: partSeconds, part: part, team: "own", scorerId: scorerId, scorerName: scorer ? scorer.name : "?", assistId: assistId || null, assistName: assist ? assist.name : null }]); });
+      setGoalModal(null);
+    }
+    function deleteLiveGoal(ev) {
+      if (!confirm("¿Borrar el gol de " + (ev.scorerName || "?") + "? Se descontará del marcador y de las estadísticas.")) return;
+      var isOurGoal = ev.team === "own";
+      if (isOurGoal) setHomeScore(function(s) { return Math.max(0, s - 1); });
+      else setAwayScore(function(s) { return Math.max(0, s - 1); });
+      setEvents(function(prev) { return prev.filter(function(e) { return e.id !== ev.id; }); });
+    }
+    var localIsLeft = venue === "local";
+    var leftName = localIsLeft ? (teamName || "Nosotros") : (rivalName || "Rival");
+    var rightName = localIsLeft ? (rivalName || "Rival") : (teamName || "Nosotros");
+    var currentTeamObjForLive = teams.find(function(t) { return t.id === currentTeamId; });
+    var leftCrest = localIsLeft ? (currentTeamObjForLive && currentTeamObjForLive.crest) : rivalCrest;
+    var rightCrest = localIsLeft ? rivalCrest : (currentTeamObjForLive && currentTeamObjForLive.crest);
+    var leftScore = localIsLeft ? homeScore : awayScore;
+    var rightScore = localIsLeft ? awayScore : homeScore;
+    var editingPlayer = editPlayerId ? players.find(function(p) { return p.id === editPlayerId; }) : null;
+    var isLastPart = part >= numParts;
+    var isInExtraTime = partSeconds >= partMinutes * 60;
+    if (!loaded) return (<div style={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: "#8A9A8F" }}>Cargando…</div>);
+
+return (<div className="app">
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700&display=swap');
+        :root { --bg: #0A0F0C; --card: #131A16; --card-2: #18211B; --card-3: #1E2822; --pitch-deep: #07160D; --ink: #EDF3EE; --ink-soft: #8A9A8F; --line: #26312A; --accent: #4CAF6A; --accent-2: #3E9A5A; --navy: #4A7FB5; --amber: #E8A93F; --coral: #E2604A; }
+        * { box-sizing: border-box; }
+        html, body { height: 100%; }
+        .app { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--ink); height: 100dvh; max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; overflow: hidden; position: relative; padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
+        h1, h2, h3 { font-family: 'Space Grotesk', sans-serif; letter-spacing: -0.01em; }
+        .content-scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-bottom: 12px; min-height: 0; }
+        .content-scroll-live { overflow: hidden; display: flex; flex-direction: column; padding-bottom: 0; }
+        .topbar { background: linear-gradient(180deg, #0F1A13 0%, #0A0F0C 100%); color: var(--ink); padding: 18px 18px 16px; border-bottom: 1px solid var(--line); }
+        .topbar-row { display: flex; align-items: center; gap: 12px; }
+        .topbar-row h1 { font-size: 19px; margin: 0; font-weight: 700; flex: 1; }
+        .topbar-sub { font-size: 12px; color: var(--ink-soft); margin-top: 3px; }
+        .back-btn { background: var(--card-2); border: 1px solid var(--line); color: var(--ink); border-radius: 10px; padding: 9px 12px; font-size: 12.5px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+        .content { padding: 14px 16px 8px; display: flex; flex-direction: column; gap: 12px; }
+        .card { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 16px; }
+        .card h2 { font-size: 15px; margin: 0 0 4px; font-weight: 700; }
+        .card-hint { font-size: 12.5px; color: var(--ink-soft); margin: 0 0 12px; line-height: 1.4; }
+        label.field-label { font-size: 11.5px; color: var(--ink-soft); display: block; margin-bottom: 6px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+        .input { width: 100%; padding: 12px 14px; border-radius: 12px; border: 1.5px solid var(--line); font-size: 16px; background: var(--card-2); color: var(--ink); font-family: inherit; }
+        .input:focus { outline: none; border-color: var(--accent); }
+        .row-inputs { display: flex; gap: 8px; margin-top: 4px; }
+        .row-inputs .input { flex: 1; }
+        .btn { border: none; border-radius: 12px; padding: 13px 16px; font-size: 14.5px; font-weight: 700; font-family: inherit; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+        .btn-block { width: 100%; }
+        .btn-small { padding: 8px 12px; font-size: 12.5px; border-radius: 10px; }
+        .btn-primary { background: linear-gradient(180deg, var(--accent) 0%, var(--accent-2) 100%); color: #06130A; }
+        .btn-primary:disabled { background: #2A3530; color: #5E6D63; cursor: not-allowed; }
+        .btn-secondary { background: var(--navy); color: #06130A; }
+        .btn-ghost { background: transparent; color: var(--ink-soft); border: 1.5px solid var(--line); }
+        .btn-danger { background: var(--coral); color: #1A0704; }
+        .warning-text { font-size: 12.5px; color: var(--coral); margin-top: 8px; font-weight: 600; }
+        .formation-grid { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+        .formation-chip { padding: 10px 14px; border-radius: 11px; border: 1.5px solid var(--line); font-size: 13px; font-weight: 700; cursor: pointer; background: var(--card-2); color: var(--ink); font-family: 'Space Grotesk', sans-serif; }
+        .formation-chip.active { background: var(--accent); color: #06130A; border-color: var(--accent); }
+        .pos-grid { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+        .pos-chip { padding: 10px 14px; border-radius: 11px; border: 1.5px solid var(--line); font-size: 13px; font-weight: 700; cursor: pointer; background: var(--card-2); color: var(--ink); font-family: 'Space Grotesk', sans-serif; }
+        .pos-chip.active { color: #0A0F0C; }
+        .list { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+        .list-row { display: flex; align-items: center; gap: 10px; padding: 11px 13px; border-radius: 12px; background: var(--card-2); border: 1.5px solid transparent; cursor: pointer; }
+        .list-row-selected { border-color: var(--accent); background: rgba(76,175,106,0.14); }
+        .list-row-absence { opacity: 0.65; }
+        .row-name { flex: 1; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+        .row-time { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 13.5px; color: var(--ink-soft); }
+        .row-remove { background: none; border: none; color: var(--coral); font-size: 18px; cursor: pointer; padding: 2px 6px; }
+        .pos-tags { display: inline-flex; gap: 3px; }
+        .pos-tag { color: #0A0F0C; padding: 2px 6px; border-radius: 5px; font-size: 9.5px; font-weight: 700; }
+        .tag-amber { color: var(--amber); }
+        .empty-note { font-size: 12.5px; color: var(--ink-soft); text-align: center; padding: 10px; }
+        .mini-tag { font-size: 11px; }
+        .mini-tag.absence { background: rgba(226,96,74,0.15); color: #E8A09A; padding: 3px 7px; border-radius: 7px; font-weight: 600; font-size: 10.5px; }
+        .team-format-tag { background: rgba(76,175,106,0.15); color: var(--accent); padding: 3px 8px; border-radius: 7px; font-size: 10.5px; font-weight: 700; margin-left: 6px; }
+        .checkbox { width: 22px; height: 22px; border-radius: 7px; border: 1.5px solid var(--line); display: flex; align-items: center; justify-content: center; color: var(--accent); font-weight: 700; font-size: 13px; flex-shrink: 0; }
+        .pitch-wrap { background: var(--pitch-deep); border-radius: 18px; padding: 8px; border: 1px solid var(--line); }
+        .pitch-svg { width: 100%; height: auto; display: block; }
+        .token-group { cursor: grab; }
+        .token-circle { stroke-width: 2.5; }
+        .token-fill { stroke: rgba(0,0,0,0.35); stroke-width: 2.5; }
+        .token-empty { fill: rgba(255,255,255,0.06); stroke: rgba(255,255,255,0.35); stroke-dasharray: 4 4; }
+        .token-selected { stroke: #FFD23F !important; stroke-width: 3.5 !important; }
+        .token-dragging { stroke: #FFD23F !important; stroke-width: 4 !important; }
+        .token-amber { stroke: var(--amber) !important; stroke-width: 3.5 !important; }
+        .token-number { font-family: 'Space Grotesk', sans-serif; font-weight: 700; fill: #FFFFFF !important; }
+        .token-name-inside { font-family: 'Space Grotesk', sans-serif; font-weight: 700; fill: #FFFFFF !important; }
+        .token-pos { fill: rgba(255,255,255,0.7); font-family: 'Space Grotesk', sans-serif; font-weight: 700; }
+        .token-group text { fill: #FFFFFF !important; }
+        .chip-bg { fill: rgba(0,0,0,0.7); }
+        .chip-text { fill: #EDF3EE; font-family: 'Space Grotesk', sans-serif; font-weight: 700; }
+        .dot-yellow { fill: var(--amber); stroke: #0A0F0C; stroke-width: 1.5; }
+        .dot-red { fill: var(--coral); stroke: #0A0F0C; stroke-width: 1.5; }
+        .selection-hint { font-size: 12.5px; color: var(--ink-soft); background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; text-align: center; }
+        .card-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 10px; border-radius: 12px; background: var(--card-2); margin-top: 6px; }
+        .card-controls { display: flex; align-items: center; gap: 4px; margin-left: auto; }
+        .card-btn { width: 32px; height: 28px; border-radius: 8px; border: none; font-size: 13px; cursor: pointer; }
+        .card-btn.yellow { background: #F5C542; }
+        .card-btn.red { background: var(--coral); }
+        .card-count { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 12.5px; min-width: 12px; text-align: center; }
+        .card-undo { background: transparent; border: 1px solid var(--line); color: var(--ink-soft); width: 24px; height: 24px; border-radius: 50%; font-size: 12px; cursor: pointer; }
+        .actions-row { display: flex; gap: 10px; }
+        .actions-row .btn { flex: 1; }
+        table.summary-table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+        table.summary-table th { text-align: left; font-size: 11px; color: var(--ink-soft); font-weight: 600; padding: 6px 8px; border-bottom: 1.5px solid var(--line); text-transform: uppercase; letter-spacing: 0.03em; }
+        table.summary-table td { padding: 10px 8px; border-bottom: 1px solid var(--line); font-size: 13.5px; }
+        table.summary-table td.t-num { font-family: 'Space Grotesk', sans-serif; font-weight: 700; }
+        .score-result { font-family: 'Space Grotesk', sans-serif; font-size: 22px; font-weight: 700; margin: 4px 0 10px; }
+        .stat-summary { display: flex; gap: 10px; }
+        .stat-box { flex: 1; background: var(--card-2); border-radius: 14px; padding: 14px 10px; text-align: center; border: 1px solid var(--line); }
+        .stat-box .num { font-family: 'Space Grotesk', sans-serif; font-size: 24px; font-weight: 700; }
+        .stat-box .lbl { font-size: 11px; color: var(--ink-soft); margin-top: 3px; text-transform: uppercase; letter-spacing: 0.04em; }
+        .history-card { display: flex; align-items: center; gap: 10px; padding: 13px; border-radius: 14px; background: var(--card-2); margin-top: 8px; border: 1px solid var(--line); }
+        .history-info { flex: 1; cursor: pointer; }
+        .history-rival { font-size: 14px; font-weight: 700; }
+        .history-meta { font-size: 11.5px; color: var(--ink-soft); margin-top: 3px; }
+        .history-score { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 18px; }
+        .upcoming-card { border-left: 3px solid var(--accent); }
+        .live-card { border-left: 3px solid var(--coral); }
+        .upcoming-badge { display: inline-block; background: rgba(76,175,106,0.2); color: var(--accent); padding: 3px 8px; border-radius: 7px; font-size: 10.5px; font-weight: 700; margin-bottom: 5px; letter-spacing: 0.05em; }
+        .live-badge { display: inline-block; background: rgba(226,96,74,0.2); color: var(--coral); padding: 3px 8px; border-radius: 7px; font-size: 10.5px; font-weight: 700; margin-bottom: 5px; letter-spacing: 0.05em; }
+        .format-header { font-family: 'Space Grotesk', sans-serif; font-size: 13px; font-weight: 700; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 18px; margin-bottom: 4px; }
+        .tabbar { flex-shrink: 0; display: flex; background: var(--card); border-top: 1px solid var(--line); }
+        .tab-btn { flex: 1; background: none; border: none; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 10px 0 11px; color: var(--ink-soft); font-size: 10.5px; font-weight: 600; cursor: pointer; font-family: inherit; position: relative; }
+        .tab-active { color: var(--ink); }
+        .tab-live-dot { position: absolute; top: 6px; right: calc(50% - 16px); width: 7px; height: 7px; border-radius: 50%; background: var(--coral); animation: pulse 1.4s ease-in-out infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+        .subtabbar { display: flex; gap: 6px; background: var(--card-2); padding: 4px; border-radius: 12px; border: 1px solid var(--line); margin-bottom: 12px; }
+        .subtab-btn { flex: 1; background: transparent; border: none; padding: 9px 10px; border-radius: 9px; font-size: 12.5px; font-weight: 700; color: var(--ink-soft); cursor: pointer; font-family: inherit; }
+        .subtab-btn.active { background: var(--accent); color: #06130A; }
+        .typebar { display: flex; gap: 6px; background: var(--card-2); padding: 4px; border-radius: 12px; border: 1px solid var(--line); margin-bottom: 12px; }
+        .type-btn { flex: 1; background: transparent; border: none; padding: 9px 10px; border-radius: 9px; font-size: 12px; font-weight: 700; color: var(--ink-soft); cursor: pointer; font-family: inherit; }
+        .type-btn.active { background: var(--navy); color: #06130A; }
+        .live-banner { background: linear-gradient(180deg, var(--accent) 0%, var(--accent-2) 100%); color: #06130A; text-align: center; padding: 9px; font-size: 12.5px; font-weight: 700; cursor: pointer; flex-shrink: 0; }
+        .live-header { flex-shrink: 0; background: linear-gradient(180deg, #0F1A13 0%, #0A0F0C 100%); border-bottom: 1px solid var(--line); padding: 8px 10px 8px; }
+        .live-top-row { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+        .live-top-row .clock-time { font-family: 'Space Grotesk', sans-serif; font-size: 26px; font-weight: 700; line-height: 1; }
+        .live-top-row .part-label { font-size: 10.5px; color: var(--ink-soft); font-weight: 600; margin-top: 1px; }
+        .live-top-row .part-label.extra { color: var(--amber); font-weight: 700; }
+        .icon-btn { width: 36px; height: 36px; border-radius: 50%; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 15px; }
+        .icon-btn-play { background: linear-gradient(180deg, var(--accent) 0%, var(--accent-2) 100%); color: #06130A; }
+        .icon-btn-back { background: var(--card-2); color: var(--ink); border: 1px solid var(--line); font-size: 17px; }
+        .zoom-ctrl { display: flex; align-items: center; gap: 2px; background: var(--card-2); border-radius: 20px; padding: 2px; border: 1px solid var(--line); }
+        .zoom-btn { width: 24px; height: 24px; border-radius: 50%; border: none; background: transparent; color: var(--ink); font-size: 13px; font-weight: 700; cursor: pointer; }
+        .live-controls { display: flex; gap: 5px; align-items: center; }
+        .score-bar { display: flex; align-items: center; justify-content: space-between; margin-top: 6px; gap: 6px; }
+        .score-side { display: flex; align-items: center; gap: 4px; flex: 1; justify-content: center; background: var(--card-2); border-radius: 10px; padding: 6px; min-width: 0; border: 1px solid var(--line); }
+        .score-side .team { font-size: 11px; font-weight: 700; max-width: 70px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .score-side .num { font-family: 'Space Grotesk', sans-serif; font-size: 19px; font-weight: 700; min-width: 20px; text-align: center; cursor: pointer; padding: 0 6px; border-radius: 6px; }
+        .score-side .num:hover { background: var(--card-3); }
+        .score-btn { width: 24px; height: 24px; border-radius: 7px; border: 1px solid var(--line); background: var(--card-3); color: var(--ink); font-size: 13px; cursor: pointer; font-weight: 700; flex-shrink: 0; }
+        .main-part-btn { width: 100%; margin-top: 6px; padding: 10px 12px; border-radius: 11px; font-size: 13px; font-weight: 700; font-family: 'Space Grotesk', sans-serif; border: none; cursor: pointer; }
+        .main-part-btn.mid { background: var(--card-2); color: var(--ink); border: 1.5px solid var(--accent); }
+        .main-part-btn.start { background: linear-gradient(180deg, var(--accent) 0%, var(--accent-2) 100%); color: #06130A; }
+        .main-part-btn.finish { background: linear-gradient(180deg, var(--coral) 0%, #B8452F 100%); color: #FFFFFF; }
+        .bench-chip { position: relative; display: flex; flex-direction: column; align-items: center; gap: 1px; border-radius: 9px; background: var(--card-2); border: 2px solid transparent; cursor: pointer; padding: 4px 3px; }
+        .bench-chip.selected { border-color: #FFD23F; }
+        .bench-chip.status-amber { border-color: var(--amber); }
+        .bench-chip-name { font-weight: 600; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; font-size: 9.5px; }
+        .bench-chip-time { font-family: 'Space Grotesk', sans-serif; font-weight: 700; color: var(--ink-soft); font-size: 9.5px; }
+        .chip-dot { position: absolute; top: 1px; right: 3px; width: 7px; height: 7px; border-radius: 50%; }
+        .chip-dot.yellow { background: var(--amber); }
+        .chip-dot.red { background: var(--coral); }
+        .live-cards-btn { background: var(--card-2); border: 1px solid var(--line); color: var(--ink); border-radius: 9px; padding: 8px 4px; font-size: 10px; font-weight: 700; cursor: pointer; text-align: center; margin-top: 2px; }
+        .live-toolbar { flex-shrink: 0; display: flex; gap: 6px; padding: 6px 10px 8px; background: var(--card); border-top: 1px solid var(--line); }
+        .live-toolbar .btn { flex: 1; padding: 9px; font-size: 12.5px; }
+        .modal-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: flex-end; z-index: 50; }
+        .modal-sheet { background: var(--card); width: 100%; max-height: 85%; border-radius: 22px 22px 0 0; padding: 18px 16px 20px; overflow-y: auto; border: 1px solid var(--line); border-bottom: none; }
+        .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+        .modal-close { background: none; border: none; color: var(--ink-soft); font-size: 24px; cursor: pointer; line-height: 1; }
+        .absence-btn { background: transparent; border: 1.5px solid var(--line); color: var(--ink-soft); width: 28px; height: 28px; border-radius: 50%; font-size: 13px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .absence-btn.has-absence { border-color: var(--coral); color: var(--coral); }
+        .absence-option { display: flex; align-items: center; gap: 10px; padding: 13px; border-radius: 12px; background: var(--card-2); margin-top: 6px; cursor: pointer; border: 1.5px solid transparent; }
+        .absence-option.selected { border-color: var(--accent); background: rgba(76,175,106,0.12); }
+        .team-card { padding: 14px; border-radius: 16px; background: var(--card-2); border: 1.5px solid transparent; cursor: pointer; margin-top: 10px; display: flex; align-items: center; gap: 10px; }
+        .team-card.active { border-color: var(--accent); }
+        .team-card h3 { margin: 0 0 4px; font-size: 17px; font-family: 'Space Grotesk', sans-serif; }
+        .team-card .team-meta { font-size: 12.5px; color: var(--ink-soft); margin-top: 4px; }
+        .team-card .team-cat { font-size: 11.5px; color: var(--ink-soft); margin-top: 2px; font-style: italic; }
+        .team-card-body { flex: 1; min-width: 0; }
+        .team-card-del { background: transparent; border: 1px solid var(--line); color: var(--ink-soft); width: 30px; height: 30px; border-radius: 50%; font-size: 16px; cursor: pointer; flex-shrink: 0; }
+        .copy-float { position: fixed; bottom: calc(70px + env(safe-area-inset-bottom)); right: 14px; z-index: 40; background: var(--card-3); color: var(--ink); border: 1.5px solid var(--line); border-radius: 50%; width: 46px; height: 46px; font-size: 20px; cursor: pointer; box-shadow: 0 6px 16px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; }
+      `}</style>
+      <div className={"content-scroll" + (isLiveFull ? " content-scroll-live" : "")}>
+        {isLiveFull ? (<>
+          <div className="live-header">
+            <div className="live-top-row">
+              <button className="icon-btn icon-btn-back" onClick={backToSetup}>←</button>
+              <div style={{ textAlign: "center", flex: 1 }}>
+                <div className="clock-time" style={isInExtraTime ? { color: "#E8A93F" } : {}}>{formatTime(partSeconds)}</div>
+                <div className={"part-label" + (isInExtraTime ? " extra" : "")}>{partLabel(part, numParts)} · {partMinutes}′ · {MATCH_TYPE_LABELS[matchType || "liga"]}{isInExtraTime ? " · +" + Math.floor((partSeconds - partMinutes * 60) / 60) + "′" : ""}</div>
+              </div>
+              <div className="live-controls">
+                <div className="zoom-ctrl">
+                  <button className="zoom-btn" onClick={function() { setPitchScale(function(s) { return Math.max(0.6, +(s - 0.1).toFixed(2)); }); }}>−</button>
+                  <button className="zoom-btn" onClick={function() { setPitchScale(1); }}>⟲</button>
+                  <button className="zoom-btn" onClick={function() { setPitchScale(function(s) { return Math.min(1.8, +(s + 0.1).toFixed(2)); }); }}>+</button>
+                </div>
+                <button className="icon-btn icon-btn-play" onClick={function() { setRunning(function(r) { return !r; }); }}>{running ? "❚❚" : "▶"}</button>
+              </div>
+            </div>
+            <div className="score-bar">
+              <div className="score-side">
+                <TeamCrest crest={leftCrest} name={leftName} size={22} />
+                <span className="team">{leftName}</span>
+                <button className="score-btn" onClick={function() { if (localIsLeft) setHomeScore(function(s) { return Math.max(0, s - 1); }); else setAwayScore(function(s) { return Math.max(0, s - 1); }); }}>−</button>
+                <span className="num" onClick={function() { setGoalsModal({ side: localIsLeft ? "home" : "away" }); }}>{leftScore}</span>
+                <button className="score-btn" onClick={function() { if (localIsLeft) onAddHomeGoal(); else onAddAwayGoal(); }}>+</button>
+              </div>
+              <div className="score-side">
+                <TeamCrest crest={rightCrest} name={rightName} size={22} />
+                <span className="team">{rightName}</span>
+                <button className="score-btn" onClick={function() { if (localIsLeft) setAwayScore(function(s) { return Math.max(0, s - 1); }); else setHomeScore(function(s) { return Math.max(0, s - 1); }); }}>−</button>
+                <span className="num" onClick={function() { setGoalsModal({ side: localIsLeft ? "away" : "home" }); }}>{rightScore}</span>
+                <button className="score-btn" onClick={function() { if (localIsLeft) onAddAwayGoal(); else onAddHomeGoal(); }}>+</button>
+              </div>
+            </div>
+            <button className={"main-part-btn " + (isLastPart ? "finish" : (running ? "mid" : "start"))} onClick={handleMainButton}>{mainButtonLabel(part, numParts, running)}</button>
+          </div>
+          <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "row", gap: 4, background: "var(--pitch-deep)", padding: 4 }}>
+            <div style={{ width: 68, flexShrink: 0, display: "flex", flexDirection: "column", gap: 3, overflowY: "auto", order: 1 }}>
+              <div style={{ fontSize: 9, fontWeight: 700, color: "var(--ink-soft)", textTransform: "uppercase", letterSpacing: "0.05em", textAlign: "center", padding: "2px 0" }}>Supl.</div>
+              {benchPlayers.length === 0 && <div className="empty-note" style={{ fontSize: 9.5, padding: 6 }}>—</div>}
+              {benchPlayers.slice().sort(function(a, b) { return a.seconds - b.seconds; }).map(function(p) {
+                var st = statusFor(p.id);
+                var isSel = selected && selected.type === "player" && selected.id === p.id;
+                var colors = playerColors(p.positions);
+                var showNum = p.number && p.number !== "0" && p.number !== 0;
+                return (<div key={p.id} className={"bench-chip" + (isSel ? " selected" : "") + (st === "amber" ? " status-amber" : "")} onClick={function() { handlePlayerTap(p.id); }}>
+                  {p.cards.red > 0 && <span className="chip-dot red" />}
+                  {p.cards.red === 0 && p.cards.yellow > 0 && <span className="chip-dot yellow" />}
+                  <ColorDot colors={colors} text={showNum ? p.number : "·"} size={20} />
+                  <div className="bench-chip-name">{p.name}</div>
+                  <div className="bench-chip-time">{formatTime(p.seconds)}</div>
+                </div>);
+              })}
+              <button className="live-cards-btn" onClick={function() { setCardsOpen(true); }}>🟨🟥{totalCards > 0 ? " (" + totalCards + ")" : ""}</button>
+            </div>
+            <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", order: 2 }}>
+              <Pitch formation={formation} slots={formation.slots} lineup={lineup} players={enrichedPlayers} selected={selected} onSlotTap={handleSlotTap} statusFor={statusFor} cardsFor={cardsOf} scale={pitchScale} onSlotDrag={handleSlotDrag} draggable={true} />
+            </div>
+          </div>
+          <div className="live-toolbar"><button className="btn btn-ghost" onClick={goToList}>Guardar y salir</button></div>
+          {cardsOpen && <div className="modal-backdrop" onClick={function() { setCardsOpen(false); }}><div className="modal-sheet" onClick={function(e) { e.stopPropagation(); }}><div className="modal-header"><h2 style={{ margin: 0 }}>Tarjetas</h2><button className="modal-close" onClick={function() { setCardsOpen(false); }}>×</button></div><p className="card-hint">Toca 🟨 o 🟥 para añadir.</p>{enrichedPlayers.filter(function(p) { return availablePlayerIds.includes(p.id); }).sort(function(a, b) { return Number(a.number) - Number(b.number); }).map(function(p) { return <CardRow key={p.id} player={p} onAdd={function(t) { addCard(p.id, t); }} onRemove={function(t) { removeCard(p.id, t); }} />; })}</div></div>}
+          {goalModal && <GoalModal mode={goalModal.team} players={enrichedPlayers.filter(function(p) { return availablePlayerIds.includes(p.id); })} onCancel={function() { setGoalModal(null); }} onConfirm={function(scorerId, assistId, isRival) { confirmGoal(scorerId, assistId, isRival); }} />}
+          {goalsModal && (function() {
+            var side = goalsModal.side;
+            var isOurSide = side === "home";
+            var sideName = isOurSide ? (teamName || "Nosotros") : (rivalName || "Rival");
+            var goalsForSide = events.filter(function(ev) { return isOurSide ? ev.team === "own" : ev.team === "rival"; });
+            return (<GoalsModal title={sideName} goals={goalsForSide} players={enrichedPlayers} onDelete={isOurSide ? function(ev) { deleteLiveGoal(ev); } : null} onClose={function() { setGoalsModal(null); }} />);
+          })()}
+        </>) : (<>
+          <div className="topbar"><div className="topbar-row"><MarkIcon /><div style={{ flex: 1 }}><h1>{teamDetailOpen ? (teamName || "Mi equipo") : "Mis equipos"}</h1><div className="topbar-sub">{teamDetailOpen ? format.label + " · " + numParts + "×" + partMinutes + "′ · " + minPlayers + " jugadores" : teams.length + " equipo" + (teams.length === 1 ? "" : "s")}</div></div>{teamDetailOpen && <button className="back-btn" onClick={function() { setTeamDetailOpen(false); setActiveTab("jugadores"); }}>← Equipos</button>}</div></div>
+          {activeTab === "jugadores" && !teamDetailOpen && <div className="content">
+            <div className="card">
+              <h2>Selecciona un equipo</h2>
+              <p className="card-hint">Toca un equipo para ver y editar su plantilla, formato y ajustes. Toca el escudo para añadirlo o cambiarlo.</p>
+              {teams.map(function(t) { var tPlayers = t.players || []; var tFmt = FORMATS[t.format || "f11"]; return (<div key={t.id} className={"team-card" + (t.id === currentTeamId ? " active" : "")}>
+                <CrestUploader title={t.crest ? "Cambiar escudo" : "Añadir escudo"} onCrest={function(u) { updateTeamCrest(t.id, u); }}>
+                  <div style={{ position: "relative" }}><TeamCrest crest={t.crest} name={t.name} size={42} /><CrestBadge hasCrest={!!t.crest} /></div>
+                </CrestUploader>
+                <div className="team-card-body" onClick={function() { switchTeam(t.id); setTeamDetailOpen(true); }}><h3>{t.name || "Sin nombre"}</h3>{t.category && <div className="team-cat">{t.category}</div>}<div className="team-meta">{tFmt.label} · {tPlayers.length} jugador{tPlayers.length === 1 ? "" : "es"}</div>{t.id === currentTeamId && <div style={{ marginTop: 6, fontSize: 11, color: "var(--accent)", fontWeight: 700 }}>● ACTIVO</div>}</div>
+                <button className="team-card-del" onClick={function(e) { e.stopPropagation(); if (confirm("¿Eliminar el equipo «" + (t.name || "Sin nombre") + "»? Se perderán todos sus datos.")) deleteTeam(t.id); }}>×</button>
+              </div>); })}
+              <button className="btn btn-primary btn-block" style={{ marginTop: 14 }} onClick={function() { setNewTeamOpen(true); }}>+ Crear equipo</button>
+            </div>
+            <div className="card">
+              <h2>Compartir con otro dispositivo</h2>
+              <p className="card-hint">Exporta todos tus equipos y partidos a un archivo, o cópialos al portapapeles para pegarlos por WhatsApp.</p>
+              <div className="actions-row" style={{ marginTop: 4 }}>
+                <button className="btn btn-ghost" onClick={handleExport}>📤 Exportar</button>
+                <button className="btn btn-ghost" onClick={handleCopyToClipboard}>📋 Copiar todo</button>
+                <button className="btn btn-ghost" onClick={handleImportClick}>📥 Importar</button>
+              </div>
+              <button className="btn btn-ghost btn-block" style={{ marginTop: 8 }} onClick={handlePasteImport}>📋 Pegar desde texto</button>
+            </div>
+          </div>}
+          {activeTab === "jugadores" && teamDetailOpen && <div className="content">
+            <div className="card">
+              <h2>Datos del equipo</h2>
+              <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 14 }}>
+                <CrestUploader title={(teams.find(function(t) { return t.id === currentTeamId; }) || {}).crest ? "Cambiar escudo" : "Añadir escudo"} onCrest={function(u) { if (currentTeamId) updateTeamCrest(currentTeamId, u); }}>
+                  <div style={{ position: "relative" }}><TeamCrest crest={(teams.find(function(t) { return t.id === currentTeamId; }) || {}).crest} name={teamName} size={56} /><CrestBadge hasCrest={!!(teams.find(function(t) { return t.id === currentTeamId; }) || {}).crest} /></div>
+                </CrestUploader>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 12, color: "var(--ink-soft)", marginBottom: 4 }}>Escudo del equipo</div>
+                  <div style={{ fontSize: 12.5, color: "var(--ink-soft)" }}>Toca el círculo para subir un PNG. Se recorta a 128×128.</div>
+                  {(teams.find(function(t) { return t.id === currentTeamId; }) || {}).crest && <button className="btn btn-ghost btn-small" style={{ marginTop: 8 }} onClick={function() { if (currentTeamId) updateTeamCrest(currentTeamId, null); }}>Quitar escudo</button>}
+                </div>
+              </div>
+              <label className="field-label">Nombre</label>
+              <input className="input" value={teamName} onChange={function(e) { setTeamName(e.target.value); }} />
+              <label className="field-label" style={{ marginTop: 14 }}>Categoría</label>
+              <input className="input" value={teamCategory} onChange={function(e) { setTeamCategory(e.target.value); }} placeholder="Ej. 1ª División Benjamín Grupo 13" />
+              <label className="field-label" style={{ marginTop: 14 }}>Formato</label>
+              <div className="formation-grid">{Object.entries(FORMATS).map(function(en) { var k = en[0]; var f = en[1]; return <div key={k} className={"formation-chip" + (teamFormat === k ? " active" : "")} onClick={function() { setTeamFormat(k); setNumParts(f.defaultParts); setPartMinutes(f.defaultPartMinutes); var keys = Object.keys(FORMATS[k].formations); if (keys.indexOf(formationKey) === -1 && formationKey !== "CUSTOM") setFormationKey(keys[0]); }}>{f.label}</div>; })}</div>
+              <label className="field-label" style={{ marginTop: 14 }}>Partes y duración (min)</label>
+              <div className="row-inputs"><input className="input" type="number" min="1" value={numParts} onChange={function(e) { setNumParts(Number(e.target.value) || 1); }} placeholder="Partes" /><input className="input" type="number" min="1" value={partMinutes} onChange={function(e) { setPartMinutes(Number(e.target.value) || 1); }} placeholder="Min por parte" /></div>
+            </div>
+            <div className="card"><h2>Plantilla ({players.length})</h2><p className="card-hint">Toca un jugador para editar su nombre, dorsal y posiciones.</p><button className="btn btn-secondary btn-block" onClick={function() { setAddPlayerOpen(true); }}>+ Añadir jugador</button><div className="list">{enrichedPlayers.length === 0 && <div className="empty-note">Todavía no has añadido jugadores.</div>}{enrichedPlayers.map(function(p) { return <PlayerRow key={p.id} player={p} onTap={function() { setEditPlayerId(p.id); }} showTime={false} extraRight={<button className="row-remove" onClick={function(e) { e.stopPropagation(); removePlayer(p.id); }}>×</button>} />; })}</div>{!canGoLineup && <div className="warning-text">Añade al menos {minPlayers} jugadores ({players.length}/{minPlayers}).</div>}</div>
+          </div>}
+          {activeTab === "partidos" && matchPhase === "list" && <div className="content">
+            {liveMatchAny && <div className="card"><h2>Partido en curso</h2><div className="history-card live-card"><div className="history-info" onClick={function() { if (liveTeam && liveTeam.id !== currentTeamId) { switchTeam(liveTeam.id); setTimeout(function() { setMatchPhase("live"); }, 60); } else setMatchPhase("live"); }}><div className="live-badge">EN VIVO · {liveMatchAny.teamName}</div><div className="history-rival">vs {liveMatchAny.rival || "Rival"}</div><div className="history-meta">{liveMatchAny.homeScore || 0}–{liveMatchAny.awayScore || 0} · {formatTime(liveMatchAny.partSeconds || 0)}</div></div><button className="btn btn-primary btn-small" onClick={function() { if (liveTeam && liveTeam.id !== currentTeamId) { switchTeam(liveTeam.id); setTimeout(function() { setMatchPhase("live"); }, 60); } else setMatchPhase("live"); }}>Continuar</button></div></div>}
+            <button className="btn btn-primary btn-block" onClick={goToNewMatchSetup}>+ Nuevo partido</button>
+            <div className="format-header">📅 Próximos Fútbol 11 ({allUpcomingF11.length})</div>
+            <div className="card">{allUpcomingF11.length === 0 && <div className="empty-note">Sin partidos programados de F11.</div>}{allUpcomingF11.slice().sort(function(a, b) { return (a.date + a.hour).localeCompare(b.date + b.hour); }).map(function(rec) { return <div className="history-card upcoming-card" key={rec.id}><TeamCrest crest={rec.teamCrest} name={rec.teamName} size={32} /><div className="history-info" onClick={function() { editUpcoming(rec); }}><div style={{ display: "flex", gap: 6, marginBottom: 5 }}><span className="upcoming-badge">PROGRAMADO</span><MatchTypeBadge matchType={rec.matchType} /></div><div className="history-rival">{rec.teamName ? rec.teamName + " " : ""}vs {rec.rival}</div><div className="history-meta">{formatDateDisplay(rec.date)} · {rec.hour} · {rec.venue === "local" ? "Local" : "Visitante"}</div></div><TeamCrest crest={rec.rivalCrest} name={rec.rival} size={32} /><button className="btn btn-primary btn-small" onClick={function() { openUpcoming(rec); }}>Empezar</button><button className="row-remove" onClick={function() { removeUpcoming(rec); }}>×</button></div>; })}</div>
+            <div className="format-header">📅 Próximos Fútbol 7 ({allUpcomingF7.length})</div>
+            <div className="card">{allUpcomingF7.length === 0 && <div className="empty-note">Sin partidos programados de F7.</div>}{allUpcomingF7.slice().sort(function(a, b) { return (a.date + a.hour).localeCompare(b.date + b.hour); }).map(function(rec) { return <div className="history-card upcoming-card" key={rec.id}><TeamCrest crest={rec.teamCrest} name={rec.teamName} size={32} /><div className="history-info" onClick={function() { editUpcoming(rec); }}><div style={{ display: "flex", gap: 6, marginBottom: 5 }}><span className="upcoming-badge">PROGRAMADO</span><MatchTypeBadge matchType={rec.matchType} /></div><div className="history-rival">{rec.teamName ? rec.teamName + " " : ""}vs {rec.rival}</div><div className="history-meta">{formatDateDisplay(rec.date)} · {rec.hour} · {rec.venue === "local" ? "Local" : "Visitante"}</div></div><TeamCrest crest={rec.rivalCrest} name={rec.rival} size={32} /><button className="btn btn-primary btn-small" onClick={function() { openUpcoming(rec); }}>Empezar</button><button className="row-remove" onClick={function() { removeUpcoming(rec); }}>×</button></div>; })}</div>
+            <div className="format-header">⚽ Historial Fútbol 11 ({allHistoryF11.length})</div>
+            <div className="card">{allHistoryF11.length === 0 && <div className="empty-note">Sin partidos de F11.</div>}{allHistoryF11.map(function(rec) { return <div className="history-card" key={rec.id}><TeamCrest crest={rec.teamCrest} name={rec.teamName} size={32} /><div className="history-info" onClick={function() { setDetailRecord(rec); }}><div style={{ display: "flex", gap: 6, marginBottom: 5 }}><MatchTypeBadge matchType={rec.matchType} /></div><div className="history-rival">{rec.teamName ? rec.teamName + " " : ""}vs {rec.rival}</div><div className="history-meta">{formatDateDisplay(rec.date)} · {rec.hour}</div></div><TeamCrest crest={rec.rivalCrest} name={rec.rival} size={32} /><div className="history-score">{rec.home}–{rec.away}</div><button className="row-remove" onClick={function(e) { e.stopPropagation(); removeHistoryRecord(rec); }}>×</button></div>; })}</div>
+            <div className="format-header">⚽ Historial Fútbol 7 ({allHistoryF7.length})</div>
+            <div className="card">{allHistoryF7.length === 0 && <div className="empty-note">Sin partidos de F7.</div>}{allHistoryF7.map(function(rec) { return <div className="history-card" key={rec.id}><TeamCrest crest={rec.teamCrest} name={rec.teamName} size={32} /><div className="history-info" onClick={function() { setDetailRecord(rec); }}><div style={{ display: "flex", gap: 6, marginBottom: 5 }}><MatchTypeBadge matchType={rec.matchType} /></div><div className="history-rival">{rec.teamName ? rec.teamName + " " : ""}vs {rec.rival}</div><div className="history-meta">{formatDateDisplay(rec.date)} · {rec.hour}</div></div><TeamCrest crest={rec.rivalCrest} name={rec.rival} size={32} /><div className="history-score">{rec.home}–{rec.away}</div><button className="row-remove" onClick={function(e) { e.stopPropagation(); removeHistoryRecord(rec); }}>×</button></div>; })}</div>
+          </div>}
+          {activeTab === "partidos" && matchPhase === "setup" && setupStep === "info" && <div className="content">
+            <div className="card"><h2>{editingUpcomingId ? "Editar partido" : "Nuevo partido"}</h2><p className="card-hint">Equipo: <b style={{ color: "var(--accent)" }}>{teamName}</b> ({format.label})</p>
+              <label className="field-label">Tipo de partido</label>
+              <div className="formation-grid">
+                <div className={"formation-chip" + (matchType === "liga" ? " active" : "")} onClick={function() { setMatchType("liga"); }}>🏆 Liga</div>
+                <div className={"formation-chip" + (matchType === "amistoso" ? " active" : "")} onClick={function() { setMatchType("amistoso"); }}>🤝 Amistoso</div>
+              </div>
+              {!matchType && <p className="warning-text">Selecciona Liga o Amistoso para continuar.</p>}
+              <label className="field-label" style={{ marginTop: 14 }}>Rival</label>
+              <input className="input" value={rivalName} onChange={function(e) { setRivalName(e.target.value); }} placeholder="Nombre rival" />
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 12 }}>
+                <CrestUploader title={rivalCrest ? "Cambiar escudo del rival" : "Añadir escudo del rival"} onCrest={function(u) { setRivalCrest(u); }}>
+                  <div style={{ position: "relative" }}><TeamCrest crest={rivalCrest} name={rivalName || "?"} size={44} /><CrestBadge hasCrest={!!rivalCrest} /></div>
+                </CrestUploader>
+                <div style={{ flex: 1 }}><div style={{ fontSize: 12.5, color: "var(--ink-soft)" }}>Escudo del rival (opcional)</div>{rivalCrest ? <button className="btn btn-ghost btn-small" style={{ marginTop: 6 }} onClick={function() { setRivalCrest(null); }}>Quitar escudo</button> : <div style={{ fontSize: 11.5, color: "var(--ink-soft)", marginTop: 4 }}>Toca el círculo para subir un PNG.</div>}</div>
+              </div>
+              <label className="field-label" style={{ marginTop: 14 }}>Sede</label><div className="formation-grid"><div className={"formation-chip" + (venue === "local" ? " active" : "")} onClick={function() { setVenue("local"); }}>Local</div><div className={"formation-chip" + (venue === "visitante" ? " active" : "")} onClick={function() { setVenue("visitante"); }}>Visitante</div></div><label className="field-label" style={{ marginTop: 14 }}>Fecha y hora</label><div className="row-inputs"><input className="input" type="date" value={matchDate} onChange={function(e) { setMatchDate(e.target.value); }} /><input className="input" type="time" value={matchHour} onChange={function(e) { setMatchHour(e.target.value); }} /></div><label className="field-label" style={{ marginTop: 14 }}>Formación</label><div className="formation-grid">{Object.keys(format.formations).map(function(k) { return <div key={k} className={"formation-chip" + (k === formationKey ? " active" : "")} onClick={function() { setFormationKey(k); setLineup({}); }}>{k}</div>; })}<div className={"formation-chip" + (formationKey === "CUSTOM" ? " active" : "")} onClick={function() { setFormationKey("CUSTOM"); setLineup({}); }}>Personalizada</div></div></div>
+            <div className="card"><h2>Jugadores disponibles ({availablePlayerIds.length}/{players.length})</h2><p className="card-hint">Marca quién puede jugar. Usa ❗ para indicar motivo de ausencia.</p><div className="list">{players.map(function(p) { var isAvail = availablePlayerIds.includes(p.id); var abs = absences[p.id]; return <div key={p.id} className={"list-row" + (isAvail && !abs ? " list-row-selected" : "") + (abs ? " list-row-absence" : "")}><div className="row-name" onClick={function() { toggleAvailable(p.id); }}>{p.name}{abs && <span className="mini-tag absence">{ABSENCE_LABELS[abs]}</span>}</div><button className={"absence-btn" + (abs ? " has-absence" : "")} onClick={function(e) { e.stopPropagation(); setAbsenceModal(p.id); }}>❗</button><div className="checkbox" onClick={function() { toggleAvailable(p.id); }}>{isAvail ? "✓" : ""}</div></div>; })}</div></div>
+            <div className="actions-row"><button className="btn btn-ghost" onClick={function() { setEditingUpcomingId(null); setMatchPhase("list"); }}>Cancelar</button><button className="btn btn-primary" disabled={!canContinueToLineup} onClick={function() { setSetupStep("lineup"); }}>Alineación</button></div>
+          </div>}
+          {activeTab === "partidos" && matchPhase === "setup" && setupStep === "lineup" && <div className="content">
+            <div className="selection-hint">Toca una ficha y luego otra para <b>intercambiar</b>. O toca una ficha y un jugador del banquillo para el cambio. <b>{filledSlots}/{formation.slots.length}</b></div>
+            <div className="pitch-wrap"><Pitch formation={formation} slots={formation.slots} lineup={lineup} players={enrichedPlayers} selected={selected} onSlotTap={handleSlotTap} statusFor={statusFor} cardsFor={cardsOf} onPitchTap={addCustomSlot} onSlotDrag={handleSlotDrag} draggable={true} /></div>
+            <div className="card"><h2>Sin asignar ({benchPlayers.length})</h2><div className="list">{benchPlayers.length === 0 && <div className="empty-note">Todos los disponibles están en el campo.</div>}{benchPlayers.slice().sort(function(a, b) { return Number(a.number) - Number(b.number); }).map(function(p) { return <PlayerRow key={p.id} player={p} onTap={function() { handlePlayerTap(p.id); }} selected={selected && selected.type === "player" && selected.id === p.id} showTime={false} />; })}</div></div>
+            <div className="actions-row"><button className="btn btn-ghost" onClick={function() { setSetupStep("info"); }}>Volver</button><button className="btn btn-ghost" onClick={scheduleMatch}>{editingUpcomingId ? "Guardar" : "Programar"}</button>{!editingUpcomingId && <button className="btn btn-primary" disabled={!canStartMatch} onClick={startMatch}>Empezar</button>}</div>
+          </div>}
+          {activeTab === "partidos" && matchPhase === "summary" && <div className="content">
+            <div className="card"><h2>Resumen</h2><div className="score-result">{teamName || "Nosotros"} {homeScore} – {awayScore} {rivalName || "Rival"}</div><div style={{ display: "flex", gap: 6, justifyContent: "center", marginBottom: 6 }}><MatchTypeBadge matchType={matchType || "liga"} /></div><p className="card-hint">{formatDateDisplay(matchDate)} · {matchHour} · Duración: {formatTime(partScores.reduce(function(a, p) { return a + p.seconds; }, 0) + partSeconds)}</p>{partScores.length > 0 && <div style={{ marginBottom: 12 }}><h3 style={{ fontSize: 13, marginBottom: 6, color: "var(--ink-soft)" }}>Por partes</h3>{partScores.map(function(ps) { return <div key={ps.part} style={{ fontSize: 13, padding: "4px 0" }}>{partLabel(ps.part, numParts)}: {teamName} {ps.home} – {ps.away} {rivalName} · {formatTime(ps.seconds)}</div>; })}</div>}{events.length > 0 && <div style={{ marginBottom: 12 }}><h3 style={{ fontSize: 13, marginBottom: 6, color: "var(--ink-soft)" }}>Goles</h3>{events.map(function(ev) { return <div key={ev.id} style={{ fontSize: 13, padding: "6px 0", borderBottom: "1px solid var(--line)" }}>⚽ {partLabel(ev.part || 1, numParts)} {formatTime(ev.time)} · <b>{ev.scorerName}</b>{ev.assistName ? <span> (asist. {ev.assistName})</span> : null}</div>; })}</div>}<table className="summary-table"><thead><tr><th>Jugador</th><th>Min</th><th>🟨</th><th>🟥</th></tr></thead><tbody>{enrichedPlayers.filter(function(p) { return availablePlayerIds.includes(p.id); }).slice().sort(function(a, b) { return b.seconds - a.seconds; }).map(function(p) { return <tr key={p.id}><td>{p.name}</td><td className="t-num">{formatTime(p.seconds)}</td><td className="t-num">{p.cards.yellow || ""}</td><td className="t-num">{p.cards.red || ""}</td></tr>; })}</tbody></table></div>
+            <div className="actions-row"><button className="btn btn-ghost" onClick={function() { setMatchPhase("list"); }}>Ver partidos</button><button className="btn btn-primary" onClick={goToNewMatchSetup}>Nuevo partido</button></div>
+          </div>}
+          {activeTab === "estadisticas" && <div className="content">
+            <p className="card-hint">Estadísticas de todos los equipos</p>
+            <div className="subtabbar">
+              <button className={"subtab-btn" + (statsTab === "partido" ? " active" : "")} onClick={function() { setStatsTab("partido"); }}>📋 Por partido</button>
+              <button className={"subtab-btn" + (statsTab === "totales" ? " active" : "")} onClick={function() { setStatsTab("totales"); }}>📊 Totales</button>
+            </div>
+            <div className="typebar">
+              <button className={"type-btn" + (matchTypeFilter === "all" ? " active" : "")} onClick={function() { setMatchTypeFilter("all"); }}>Todos</button>
+              <button className={"type-btn" + (matchTypeFilter === "liga" ? " active" : "")} onClick={function() { setMatchTypeFilter("liga"); }}>🏆 Liga</button>
+              <button className={"type-btn" + (matchTypeFilter === "amistoso" ? " active" : "")} onClick={function() { setMatchTypeFilter("amistoso"); }}>🤝 Amistoso</button>
+            </div>
+            {statsTab === "partido" && <div>
+              <button className="btn btn-primary btn-block" style={{ marginBottom: 10 }} onClick={function() { setManualModal({ kind: "played", rec: null }); }}>+ Añadir partido jugado</button>
+              <div className="formation-grid" style={{ marginBottom: 6 }}>
+                <div className={"formation-chip" + (histTeamFilter === "all" ? " active" : "")} onClick={function() { setHistTeamFilter("all"); }}>Todos</div>
+                {teams.map(function(t) { return <div key={t.id} className={"formation-chip" + (histTeamFilter === t.id ? " active" : "")} onClick={function() { setHistTeamFilter(t.id); }}>{t.name || "Sin nombre"}</div>; })}
+              </div>
+              <div className="card" style={{ padding: 12 }}>
+                {statsHistoryFiltered.length === 0 && <div className="empty-note">Sin partidos para este filtro.</div>}
+                {statsHistoryFiltered.map(function(rec) {
+                  var bc = (rec.teamFormat || "f11") === "f7" ? "#4A7FB5" : "#3FA65A";
+                  return (<div className="history-card" key={rec.id} onClick={function() { setDetailRecord(rec); }}>
+                    <TeamCrest crest={rec.teamCrest} name={rec.teamName} size={32} />
+                    <div className="history-info">
+                      <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 4, flexWrap: "wrap" }}>
+                        <span style={{ background: bc + "22", color: bc, padding: "2px 7px", borderRadius: 6, fontSize: 10, fontWeight: 700 }}>{rec.teamName} · {FORMATS[rec.teamFormat || "f11"].label}</span>
+                        <MatchTypeBadge matchType={rec.matchType} />
+                      </div>
+                      <div className="history-rival">vs {rec.rival}</div>
+                      <div className="history-meta">{formatDateDisplay(rec.date)} · {rec.hour} · {rec.venue === "local" ? "Local" : "Visitante"}</div>
+                    </div>
+                    <TeamCrest crest={rec.rivalCrest} name={rec.rival} size={32} />
+                    <div className="history-score">{rec.home}–{rec.away}</div>
+                  </div>);
+                })}
+              </div>
+            </div>}
+            {statsTab === "totales" && <div>
+              <div className="format-header">⚽ Fútbol 11</div>
+              {teamsF11.length === 0 && <div className="card"><div className="empty-note">No hay equipos de F11.</div></div>}
+              {teamsF11.map(function(t) { var th = allHistoryF11.filter(function(r) { return r.teamId === t.id; }); return <TeamStatsBlock key={t.id} team={t} history={th} typeFilter={matchTypeFilter} />; })}
+              <div className="format-header">⚽ Fútbol 7</div>
+              {teamsF7.length === 0 && <div className="card"><div className="empty-note">No hay equipos de F7.</div></div>}
+              {teamsF7.map(function(t) { var th = allHistoryF7.filter(function(r) { return r.teamId === t.id; }); return <TeamStatsBlock key={t.id} team={t} history={th} typeFilter={matchTypeFilter} />; })}
+              {teamsF5.length > 0 && <div>
+                <div className="format-header">⚽ Fútbol 5</div>
+                {teamsF5.map(function(t) { var th = allHistory.filter(function(r) { return r.teamId === t.id && (r.teamFormat || "f11") === "f5"; }); return <TeamStatsBlock key={t.id} team={t} history={th} typeFilter={matchTypeFilter} />; })}
+              </div>}
+            </div>}
+          </div>}
+        </>)}
+      </div>
+      {matchPhase === "live" && activeTab !== "partidos" && <div className="live-banner" onClick={function() { setActiveTab("partidos"); }}>● {rivalName ? "vs " + rivalName : "Partido"} en curso · parte {part} · toca para volver</div>}
+      {teams.length > 0 && !isLiveFull && <button className="copy-float" title="Copiar todos los datos al portapapeles" onClick={handleCopyToClipboard}>📋</button>}
+      {absenceModal && <div className="modal-backdrop" onClick={function() { setAbsenceModal(null); }}><div className="modal-sheet" onClick={function(e) { e.stopPropagation(); }}><div className="modal-header"><h2 style={{ margin: 0 }}>Motivo de ausencia</h2><button className="modal-close" onClick={function() { setAbsenceModal(null); }}>×</button></div><p className="card-hint">Selecciona el motivo.</p><div className={"absence-option" + (!absences[absenceModal] ? " selected" : "")} onClick={function() { var n = Object.assign({}, absences); delete n[absenceModal]; setAbsences(n); setAvailablePlayerIds(function(prev) { return prev.includes(absenceModal) ? prev : prev.concat([absenceModal]); }); setAbsenceModal(null); }}><span>✅</span> Convocado</div>{Object.entries(ABSENCE_LABELS).map(function(en) { var k = en[0]; var label = en[1]; return <div key={k} className={"absence-option" + (absences[absenceModal] === k ? " selected" : "")} onClick={function() { setAbsences(function(prev) { var n = Object.assign({}, prev); n[absenceModal] = k; return n; }); setAvailablePlayerIds(function(prev) { return prev.filter(function(x) { return x !== absenceModal; }); }); setLineup(function(prev) { var n = Object.assign({}, prev); Object.keys(n).forEach(function(kk) { if (n[kk] === absenceModal) delete n[kk]; }); return n; }); setAbsenceModal(null); }}><span>{label.split(" ")[0]}</span> {label.replace(/^\S+\s/, "")}</div>; })}</div></div>}
+      {newTeamOpen && <NewTeamModal onCreate={function(name, fmt, category) { createTeam(name, fmt, category); setNewTeamOpen(false); setTeamDetailOpen(true); }} onCancel={function() { setNewTeamOpen(false); }} />}
+      {addPlayerOpen && <AddPlayerModal onAdd={addPlayer} onCancel={function() { setAddPlayerOpen(false); }} />}
+      {editingPlayer && <AddPlayerModal existing={editingPlayer} onAdd={function(data) { updatePlayer(editingPlayer.id, data); }} onCancel={function() { setEditPlayerId(null); }} />}
+      {manualModal && <ManualMatchModal key={(manualModal.rec ? manualModal.rec.id : "new") + manualModal.kind} teams={teams} currentTeamId={currentTeamId} kind={manualModal.kind} initial={manualModal.rec} onSave={function(rec, isNew) { saveManual(manualModal.kind, rec, isNew); }} onCancel={function() { setManualModal(null); }} />}
+      {matchTeamSelectorOpen && <MatchTeamSelector teams={teams} onSelect={onSelectMatchTeam} onCancel={function() { setMatchTeamSelectorOpen(false); }} />}
+      {detailRecord && <MatchDetailModal record={detailRecord} onEdit={function() { setManualModal({ kind: "played", rec: detailRecord }); setDetailRecord(null); }} onClose={function() { setDetailRecord(null); }} onDeleteGoal={function(ev) { deleteGoalFromRecord(detailRecord, ev); }} />}
+      {importPayload && <div className="modal-backdrop" onClick={function() { setImportPayload(null); }}><div className="modal-sheet" onClick={function(e) { e.stopPropagation(); }}>
+        <div className="modal-header"><h2 style={{ margin: 0 }}>Importar datos</h2><button className="modal-close" onClick={function() { setImportPayload(null); }}>×</button></div>
+        {function() {
+          var c = countTeamsPayload(importPayload);
+          return (<>
+            <p className="card-hint">El archivo contiene:</p>
+            <div className="list" style={{ marginBottom: 12 }}>
+              <div className="list-row" style={{ cursor: "default" }}><div className="row-name">{c.teams} equipo{c.teams === 1 ? "" : "s"}</div></div>
+              <div className="list-row" style={{ cursor: "default" }}><div className="row-name">{c.matches} partido{c.matches === 1 ? "" : "s"} en el historial</div></div>
+              <div className="list-row" style={{ cursor: "default" }}><div className="row-name">{c.upcoming} partido{c.upcoming === 1 ? "" : "s"} programado{c.upcoming === 1 ? "" : "s"}</div></div>
+            </div>
+            <p className="card-hint">¿Cómo quieres aplicar la importación?</p>
+            <button className="btn btn-primary btn-block" style={{ marginBottom: 8 }} onClick={doImportMerge}>🔀 Fusionar (recomendado)</button>
+            <p className="card-hint" style={{ margin: "0 0 8px", fontSize: 12 }}>Mantiene tus equipos actuales y añade/actualiza los del archivo. En conflicto gana el más reciente.</p>
+            <button className="btn btn-danger btn-block" style={{ marginBottom: 8 }} onClick={function() { if (confirm("¿Reemplazar TODOS tus datos actuales por los del archivo? Esta acción no se puede deshacer.")) doImportReplace(); }}>⚠️ Reemplazar todo</button>
+            <p className="card-hint" style={{ margin: "0 0 12px", fontSize: 12 }}>Borra tus equipos actuales y pone los del archivo.</p>
+            <button className="btn btn-ghost btn-block" onClick={function() { setImportPayload(null); }}>Cancelar</button>
+          </>);
+        }()}
+      </div></div>}
+      {importNotice && <div className="modal-backdrop" onClick={function() { setImportNotice(null); }}><div className="modal-sheet" onClick={function(e) { e.stopPropagation(); }}>
+        <div className="modal-header"><h2 style={{ margin: 0 }}>Importación completada</h2><button className="modal-close" onClick={function() { setImportNotice(null); }}>×</button></div>
+        <p className="card-hint">Se han importado correctamente ({importNotice.type === "fusionar" ? "fusionando" : "reemplazando"}):</p>
+        <div className="list" style={{ marginBottom: 12 }}>
+          <div className="list-row" style={{ cursor: "default" }}><div className="row-name">{importNotice.teams} equipo{importNotice.teams === 1 ? "" : "s"}</div></div>
+          <div className="list-row" style={{ cursor: "default" }}><div className="row-name">{importNotice.matches} partido{importNotice.matches === 1 ? "" : "s"} en el historial</div></div>
+          <div className="list-row" style={{ cursor: "default" }}><div className="row-name">{importNotice.upcoming} programado{importNotice.upcoming === 1 ? "" : "s"}</div></div>
+        </div>
+        <button className="btn btn-primary btn-block" onClick={function() { setImportNotice(null); }}>Entendido</button>
+      </div></div>}
+      <div className="tabbar">{tabs.map(function(t) { var Icon = t.icon; return <button key={t.id} className={"tab-btn" + (activeTab === t.id ? " tab-active" : "")} onClick={function() { setActiveTab(t.id); if (t.id === "jugadores") setTeamDetailOpen(false); }}>{matchPhase === "live" && t.id === "partidos" && activeTab !== "partidos" && <span className="tab-live-dot" />}<Icon active={activeTab === t.id} /><span>{t.label}</span></button>; })}</div>
+    </div>);
+  }
+  ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+  </script>
+</body>
+</html>
